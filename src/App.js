@@ -1,11 +1,10 @@
-import './App.css';
+import "./App.css";
+import { GetData } from "./utils/test.js";
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        poop
-      </header>
+      <header className="App-header">{GetData()}</header>
     </div>
   );
 }
