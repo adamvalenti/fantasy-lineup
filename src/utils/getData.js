@@ -6,12 +6,12 @@ export function GetData() {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    fetch("http://data.nba.net/10s/prod/v1/2021/players/1630547_profile.json")
+    fetch("http://data.nba.net/10s/prod/v1/2021/players/1629027_profile.json")
       .then((res) => res.json())
       .then(
         (result) => {
           setIsLoaded(true);
-          setItems(result.league.standard.stats.careerSummary);
+          setItems(result.league.standard.stats.latest);
         },
         (error) => {
           setIsLoaded(true);
@@ -27,11 +27,15 @@ export function GetData() {
   } else {
     return (
       <ul>
-        {Object.keys(items).map((key, idx) => (
+        {Object.keys(items).map((key, idx) => {
+          let isnum = /[+-]?([0-9]*[.])?[0-9]+/.test(items[key]);
+          if (isnum) {
+            items[key] = parseFloat(items[key], 10);
+          }
           <li key={idx}>
             {key}: {items[key]}
-          </li>
-        ))}
+          </li>;
+        })}
       </ul>
     );
   }

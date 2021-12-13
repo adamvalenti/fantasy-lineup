@@ -1,5 +1,5 @@
 import "./App.css";
-import { GetData } from "./utils/test.js";
+import { GetData } from "./utils/getData.js";
 
 function App() {
   return (
