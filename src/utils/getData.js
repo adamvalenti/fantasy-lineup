@@ -1,42 +1,26 @@
-import { useEffect, useState } from "react";
+const axios = require("axios");
 
-export function GetData() {
-  const [error, setError] = useState(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [items, setItems] = useState([]);
+const url = "http://data.nba.net/10s/prod/v1/2021/players/1629027_profile.json";
 
-  useEffect(() => {
-    fetch("http://data.nba.net/10s/prod/v1/2021/players/1629027_profile.json")
-      .then((res) => res.json())
-      .then(
-        (result) => {
-          setIsLoaded(true);
-          setItems(result.league.standard.stats.latest);
-        },
-        (error) => {
-          setIsLoaded(true);
-          setError(error);
-        }
-      );
-  }, []);
+export function getData() {
+  var items = {};
+  axios
+    .get(url)
+    .then((res) => res.json())
+    .then((result) => (items = result.league.standard.stats.latest))
+    .catch((error) => {
+      console.log(error);
+      return error.message;
+    });
 
-  if (error) {
-    return <div>Error: {error.message}</div>;
-  } else if (!isLoaded) {
-    return <div>Loading...</div>;
-  } else {
-    return (
-      <ul>
-        {Object.keys(items).map((key, idx) => {
-          let isnum = /[+-]?([0-9]*[.])?[0-9]+/.test(items[key]);
-          if (isnum) {
-            items[key] = parseFloat(items[key], 10);
-          }
-          <li key={idx}>
-            {key}: {items[key]}
-          </li>;
-        })}
-      </ul>
-    );
+  var results = [];
+  for (let i = 0; i < items.length; i++) {
+    let isnum = /[+-]?([0-9]*[.])?[0-9]+/.test(items[i]);
+    if (isnum) {
+      items[i] = parseFloat(items[i], 10);
+    }
+    results.append({ key: items[i] });
   }
+  console.log(results);
+  return results;
 }

@@ -1,10 +1,12 @@
 import "./App.css";
-import { GetData } from "./utils/getData.js";
+import { getData } from "./utils/getData.js";
+
+getData();
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">{GetData()}</header>
+      <header className="App-header">In progress</header>
     </div>
   );
 }
