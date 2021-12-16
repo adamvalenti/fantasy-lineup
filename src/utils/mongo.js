@@ -1,3 +1,5 @@
+const { getData } = require("./getData.js");
+
 const { MongoClient } = require("mongodb");
 
 async function main() {
@@ -14,11 +16,14 @@ async function main() {
 
   try {
     await client.connect();
-    await findPlayersByStatConstraint(client, {
-      minimum: "2",
-      stat: "yearsPro",
-      maxPlayers: 5,
-    });
+    // await findPlayersByStatConstraint(client, {
+    //   minimum: "2",
+    //   stat: "yearsPro",
+    //   maxPlayers: 5,
+    // });
+
+    const player0 = new Player(getData());
+    // await createPlayer(client, getData("203952"));
 
     // await findPlayersByStatConstraint(client, {
     //   minimum: "2",
@@ -137,4 +142,154 @@ async function listDatabases(client) {
   databasesList.databases.forEach((db) => {
     console.log("- " + db.name);
   });
+}
+
+class Player {
+  constructor(playerData) {
+    this._id = parseInt(playerData.personId);
+    this.name = playerData.name;
+    this.teamId = parseInt(playerData.teamId);
+    this.jersey = parseInt(playerData.jersey);
+    this.heightFeet = parseInt(playerData.heightFeet);
+    this.heightInches = parseInt(playerData.heightInches);
+    this.weightPounds = parseInt(playerData.weightPounds);
+    this.dateofBirthUTC = playerData.dateofBirthUTC;
+    this.yearsPro = parseInt(playerData.yearsPro);
+    this.country = playerData.country;
+    this.stats = playerData.stats;
+
+    console.log(
+      "New player created!\nname: " + this.name + "\nid: " + this._id
+    );
+  }
+
+  // generatePlayer() {
+
+  //   _id: "1629027",
+  //   name: "Trae Young",
+  //   teamId: "1610612737",
+  //   jersey: "11",
+  //   isActive: true,
+  //   pos: "G",
+  //   heightFeet: "6",
+  //   heightInches: "1",
+  //   weightPounds: "164",
+  //   dateofBirthUTC: "1995-02-23",
+  //   yearsPro: "3",
+  //   country: "USA",
+  //   stats: {
+  //     latest: {
+  //       seasonYear: 2021,
+  //       seasonStageId: 2,
+  //       ppg: "26.5",
+  //       rpg: "4.1",
+  //       apg: "9.5",
+  //       mpg: "34.4",
+  //       topg: "4.1",
+  //       spg: "1.0",
+  //       bpg: "0.1",
+  //       tpp: "38.6",
+  //       ftp: "88.7",
+  //       fgp: "45.2",
+  //       assists:
+  //       blocks:
+  //       steals:
+  //       turnovers:
+  //       offReb:
+  //       defReb:
+  //       totReb:
+  //       fgm:
+  //       fga:
+  //       tpm:
+  //       tpa:
+  //       ftm:
+  //       fta:
+  //       pFouls:
+  //       points:
+  //       gamesPlayed:
+  //       gamesStarted:
+  //       plusMinus:
+  //       min:
+  //       dd2:
+  //       td3:
+  //     },
+  //     careerSummary: {
+
+  //       tpp: "38.6",
+  //       ftp: "88.7",
+  //       fgp: "45.2",
+  //       ppg: "26.5",
+  //       rpg: "4.1",
+  //       apg: "9.5",
+  //       bpg: "0.1",
+  //       mpg: "34.4",
+  //       spg: "1.0",
+  //       assists:
+  //       blocks:
+  //       steals:
+  //       turnovers:
+  //       offReb:
+  //       defReb:
+  //       totReb:
+  //       fgm:
+  //       fga:
+  //       tpm:
+  //       tpa:
+  //       ftm:
+  //       fta:
+  //       pFouls:
+  //       points:
+  //       gamesPlayed:
+  //       gamesStarted:
+  //       plusMinus:
+  //       min:
+  //       dd2:
+  //       td3:
+  //     },
+  //     regularSeason: {
+  //       season:[
+  //         0: {
+  //           seasonyear:
+  //           teams: [
+  //             0:
+  //             1:
+  //           ]
+  //           total:{}
+  //             ppg: "26.5",
+  //             rpg: "4.1",
+  //             apg: "9.5",
+  //             mpg: "34.4",
+  //             topg: "4.1",
+  //             spg: "1.0",
+  //             bpg: "0.1",
+  //             tpp: "38.6",
+  //             ftp: "88.7",
+  //             fgp: "45.2",
+  //             assists:
+  //             blocks:
+  //             steals:
+  //             turnovers:
+  //             offReb:
+  //             defReb:
+  //             totReb:
+  //             fgm:
+  //             fga:
+  //             tpm:
+  //             tpa:
+  //             ftm:
+  //             fta:
+  //             pFouls:
+  //             points:
+  //             gamesPlayed:
+  //             gamesStarted:
+  //             plusMinus:
+  //             min:
+  //             dd2:
+  //             td3:
+  //           }
+  //         }
+  //         1:
+  //       ]
+  //     }
+  // }
 }
