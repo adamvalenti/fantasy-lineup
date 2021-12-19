@@ -1,10 +1,8 @@
 const { getData } = require("./getData.js");
-
 const { MongoClient } = require("mongodb");
+const config = require("../../config.json");
 
 async function main() {
-  const config = require("../../config.json");
-
   const MONGO_CONNECTION_STRING = config.MONGO_CONNECTION_STRING;
 
   const uri =
@@ -16,53 +14,7 @@ async function main() {
 
   try {
     await client.connect();
-    // await findPlayersByStatConstraint(client, {
-    //   minimum: "2",
-    //   stat: "yearsPro",
-    //   maxPlayers: 5,
-    // });
-
-    const player0 = new Player(getData());
-    // await createPlayer(client, getData("203952"));
-
-    // await findPlayersByStatConstraint(client, {
-    //   minimum: "2",
-    //   stat: "yearsPro",
-    //   maxPlayers: 5,
-    // });
-
-    // await createPlayer(client, {
-
-    //   _id: "1629027",
-    //   name: "Trae Young",
-    //   teamId: "1610612737",
-    //   jersey: "11",
-    //   isActive: true,
-    //   pos: "G",
-    //   heightFeet: "6",
-    //   heightInches: "1",
-    //   weightPounds: "164",
-    //   dateofBirthUTC: "199",
-    //   yearsPro: "3",
-    //   country: "USA",
-    //   stats: {
-    //     latest: {
-    //       seasonYear: 2021,
-    //       ppg: "26.5",
-    //       rpg: "4.1",
-    //       apg: "9.5",
-    //       mpg: "34.4",
-    //       topg: "4.1",
-    //       spg: "1.0",
-    //       bpg: "0.1",
-    //       tpp: "38.6",
-    //       ftp: "88.7",
-    //       fgp: "45.2",
-    //     },
-    //     careerSummary: {},
-    //     regularSeason: {},
-    //   },
-    // });
+    // await createPlayer(client, await getData("203952"));
   } catch (error) {
     console.error(error);
   } finally {
@@ -72,13 +24,186 @@ async function main() {
 
 main().catch(console.error);
 
-async function createPlayer(client, newPlayer) {
-  const result = await client
+async function createPlayer(client, playerData) {
+  var seasonsPlayed = [];
+
+  for (let i = 0; i < playerData.regularSeason.season.length; i++) {
+    var currSeason = playerData.regularSeason.season[i];
+    var teamsPlayed = [];
+
+    for (let j = 0; j < currSeason.teams.length; j++) {
+      var currTeam = currSeason.teams[j];
+
+      var team = {
+        teamId: parseInt([currTeam].assists),
+        ppg: parseFloat([currTeam].ppg),
+        rpg: parseFloat([currTeam].rpg),
+        apg: parseFloat([currTeam].apg),
+        spg: parseFloat([currTeam].spg),
+        bpg: parseFloat([currTeam].bpg),
+        topg: parseFloat([currTeam].topg),
+        mpg: parseFloat([currTeam].mpg),
+        tpp: parseFloat([currTeam].tpp),
+        ftp: parseFloat([currTeam].ftp),
+        fgp: parseFloat([currTeam].fgp),
+        points: parseInt([currTeam].points),
+        assists: parseInt([currTeam].assists),
+        blocks: parseInt([currTeam].blocks),
+        steals: parseInt([currTeam].steals),
+        turnovers: parseInt([currTeam].turnovers),
+        offReb: parseInt([currTeam].offReb),
+        defReb: parseInt([currTeam].defReb),
+        totReb: parseInt([currTeam].totReb),
+        fgm: parseInt([currTeam].fgm),
+        fga: parseInt([currTeam].fga),
+        tpm: parseInt([currTeam].tpm),
+        tpa: parseInt([currTeam].tpa),
+        ftm: parseInt([currTeam].ftm),
+        fta: parseInt([currTeam].fta),
+        pFouls: parseInt([currTeam].pFouls),
+        gamesPlayed: parseInt([currTeam].gamesPlayed),
+        gamesStarted: parseInt([currTeam].gamesStarted),
+        plusMinus: parseInt([currTeam].plusMinus),
+        min: parseInt([currTeam].min),
+        dd2: parseInt([currTeam].dd2),
+        td3: parseInt([currTeam].td3),
+      };
+
+      teamsPlayed.push(team);
+    }
+    var season = {
+      seasonYear: [currSeason].seasonYear,
+      teams: teamsPlayed,
+      ppg: parseFloat([currSeason].ppg),
+      rpg: parseFloat([currSeason].rpg),
+      apg: parseFloat([currSeason].apg),
+      spg: parseFloat([currSeason].spg),
+      bpg: parseFloat([currSeason].bpg),
+      topg: parseFloat([currSeason].topg),
+      mpg: parseFloat([currSeason].mpg),
+      tpp: parseFloat([currSeason].tpp),
+      ftp: parseFloat([currSeason].ftp),
+      fgp: parseFloat([currSeason].fgp),
+      points: parseInt([currSeason].points),
+      assists: parseInt([currSeason].assists),
+      blocks: parseInt([currSeason].blocks),
+      steals: parseInt([currSeason].steals),
+      turnovers: parseInt([currSeason].turnovers),
+      offReb: parseInt([currSeason].offReb),
+      defReb: parseInt([currSeason].defReb),
+      totReb: parseInt([currSeason].totReb),
+      fgm: parseInt([currSeason].fgm),
+      fga: parseInt([currSeason].fga),
+      tpm: parseInt([currSeason].tpm),
+      tpa: parseInt([currSeason].tpa),
+      ftm: parseInt([currSeason].ftm),
+      fta: parseInt([currSeason].fta),
+      pFouls: parseInt([currSeason].pFouls),
+      gamesPlayed: parseInt([currSeason].gamesPlayed),
+      gamesStarted: parseInt([currSeason].gamesStarted),
+      plusMinus: parseInt([currSeason].plusMinus),
+      min: parseInt([currSeason].min),
+      dd2: parseInt([currSeason].dd2),
+      td3: parseInt([currSeason].td3),
+    };
+
+    seasonsPlayed.push(season);
+  }
+
+  var player = {
+    _id: parseInt(playerData.personId),
+    name: playerData.firstName + " " + playerData.lastName,
+    teamId: parseInt(playerData.teamId),
+    jersey: parseInt(playerData.jersey),
+    heightFeet: parseInt(playerData.heightFeet),
+    heightInches: parseInt(playerData.heightInches),
+    weightPounds: parseInt(playerData.weightPounds),
+    dateOfBirthUTC: playerData.dateOfBirthUTC,
+    yearsPro: parseInt(playerData.yearsPro),
+    country: playerData.country,
+    stats: {
+      latest: {
+        seasonYear: playerData.latest.seasonYear,
+        seasonStageId: playerData.latest.seasonStageId,
+        ppg: parseFloat(playerData.latest.ppg),
+        rpg: parseFloat(playerData.latest.rpg),
+        apg: parseFloat(playerData.latest.apg),
+        spg: parseFloat(playerData.latest.spg),
+        bpg: parseFloat(playerData.latest.bpg),
+        topg: parseFloat(playerData.latest.topg),
+        mpg: parseFloat(playerData.latest.mpg),
+        tpp: parseFloat(playerData.latest.tpp),
+        ftp: parseFloat(playerData.latest.ftp),
+        fgp: parseFloat(playerData.latest.fgp),
+        points: parseInt(playerData.latest.points),
+        assists: parseInt(playerData.latest.assists),
+        blocks: parseInt(playerData.latest.blocks),
+        steals: parseInt(playerData.latest.steals),
+        turnovers: parseInt(playerData.latest.turnovers),
+        offReb: parseInt(playerData.latest.offReb),
+        defReb: parseInt(playerData.latest.defReb),
+        totReb: parseInt(playerData.latest.totReb),
+        fgm: parseInt(playerData.latest.fgm),
+        fga: parseInt(playerData.latest.fga),
+        tpm: parseInt(playerData.latest.tpm),
+        tpa: parseInt(playerData.latest.tpa),
+        ftm: parseInt(playerData.latest.ftm),
+        fta: parseInt(playerData.latest.fta),
+        pFouls: parseInt(playerData.latest.pFouls),
+        gamesPlayed: parseInt(playerData.latest.gamesPlayed),
+        gamesStarted: parseInt(playerData.latest.gamesStarted),
+        plusMinus: parseInt(playerData.latest.plusMinus),
+        min: parseInt(playerData.latest.min),
+        dd2: parseInt(playerData.latest.dd2),
+        td3: parseInt(playerData.latest.td3),
+      },
+      careerSummary: {
+        ppg: parseFloat(playerData.careerSummary.ppg),
+        rpg: parseFloat(playerData.careerSummary.rpg),
+        apg: parseFloat(playerData.careerSummary.apg),
+        spg: parseFloat(playerData.careerSummary.spg),
+        bpg: parseFloat(playerData.careerSummary.bpg),
+        mpg: parseFloat(playerData.careerSummary.mpg),
+        tpp: parseFloat(playerData.careerSummary.tpp),
+        ftp: parseFloat(playerData.careerSummary.ftp),
+        fgp: parseFloat(playerData.careerSummary.fgp),
+        points: parseInt(playerData.careerSummary.points),
+        assists: parseInt(playerData.careerSummary.assists),
+        blocks: parseInt(playerData.careerSummary.blocks),
+        steals: parseInt(playerData.careerSummary.steals),
+        turnovers: parseInt(playerData.careerSummary.turnovers),
+        offReb: parseInt(playerData.careerSummary.offReb),
+        defReb: parseInt(playerData.careerSummary.defReb),
+        totReb: parseInt(playerData.careerSummary.totReb),
+        fgm: parseInt(playerData.careerSummary.fgm),
+        fga: parseInt(playerData.careerSummary.fga),
+        tpm: parseInt(playerData.careerSummary.tpm),
+        tpa: parseInt(playerData.careerSummary.tpa),
+        ftm: parseInt(playerData.careerSummary.ftm),
+        fta: parseInt(playerData.careerSummary.fta),
+        pFouls: parseInt(playerData.careerSummary.pFouls),
+        gamesPlayed: parseInt(playerData.careerSummary.gamesPlayed),
+        gamesStarted: parseInt(playerData.careerSummary.gamesStarted),
+        plusMinus: parseInt(playerData.careerSummary.plusMinus),
+        min: parseInt(playerData.careerSummary.min),
+        dd2: parseInt(playerData.careerSummary.dd2),
+        td3: parseInt(playerData.careerSummary.td3),
+      },
+      regularSeason: {
+        season: seasonsPlayed,
+      },
+    },
+  };
+
+  await client
     .db("nbaFantasyLineup")
     .collection("players")
-    .insertOne(newPlayer);
-
-  console.log("New player added with the following id: " + result.insertedId);
+    .insertOne(player)
+    .then(
+      console.log(
+        player.name + " was added with the following id: " + player._id
+      )
+    );
 }
 
 async function createPlayers(client, newPlayers) {
@@ -135,6 +260,15 @@ async function findPlayersByStatConstraint(
   }
 }
 
+async function deletePlayer(client, id) {
+  const result = await client
+    .db("nbaFantasyLineup")
+    .collection("players")
+    .deleteOne({ _id: id });
+
+  console.log(result.name + " was deleted");
+}
+
 async function listDatabases(client) {
   const databasesList = await client.db().admin().listDatabases();
 
@@ -142,154 +276,4 @@ async function listDatabases(client) {
   databasesList.databases.forEach((db) => {
     console.log("- " + db.name);
   });
-}
-
-class Player {
-  constructor(playerData) {
-    this._id = parseInt(playerData.personId);
-    this.name = playerData.name;
-    this.teamId = parseInt(playerData.teamId);
-    this.jersey = parseInt(playerData.jersey);
-    this.heightFeet = parseInt(playerData.heightFeet);
-    this.heightInches = parseInt(playerData.heightInches);
-    this.weightPounds = parseInt(playerData.weightPounds);
-    this.dateofBirthUTC = playerData.dateofBirthUTC;
-    this.yearsPro = parseInt(playerData.yearsPro);
-    this.country = playerData.country;
-    this.stats = playerData.stats;
-
-    console.log(
-      "New player created!\nname: " + this.name + "\nid: " + this._id
-    );
-  }
-
-  // generatePlayer() {
-
-  //   _id: "1629027",
-  //   name: "Trae Young",
-  //   teamId: "1610612737",
-  //   jersey: "11",
-  //   isActive: true,
-  //   pos: "G",
-  //   heightFeet: "6",
-  //   heightInches: "1",
-  //   weightPounds: "164",
-  //   dateofBirthUTC: "1995-02-23",
-  //   yearsPro: "3",
-  //   country: "USA",
-  //   stats: {
-  //     latest: {
-  //       seasonYear: 2021,
-  //       seasonStageId: 2,
-  //       ppg: "26.5",
-  //       rpg: "4.1",
-  //       apg: "9.5",
-  //       mpg: "34.4",
-  //       topg: "4.1",
-  //       spg: "1.0",
-  //       bpg: "0.1",
-  //       tpp: "38.6",
-  //       ftp: "88.7",
-  //       fgp: "45.2",
-  //       assists:
-  //       blocks:
-  //       steals:
-  //       turnovers:
-  //       offReb:
-  //       defReb:
-  //       totReb:
-  //       fgm:
-  //       fga:
-  //       tpm:
-  //       tpa:
-  //       ftm:
-  //       fta:
-  //       pFouls:
-  //       points:
-  //       gamesPlayed:
-  //       gamesStarted:
-  //       plusMinus:
-  //       min:
-  //       dd2:
-  //       td3:
-  //     },
-  //     careerSummary: {
-
-  //       tpp: "38.6",
-  //       ftp: "88.7",
-  //       fgp: "45.2",
-  //       ppg: "26.5",
-  //       rpg: "4.1",
-  //       apg: "9.5",
-  //       bpg: "0.1",
-  //       mpg: "34.4",
-  //       spg: "1.0",
-  //       assists:
-  //       blocks:
-  //       steals:
-  //       turnovers:
-  //       offReb:
-  //       defReb:
-  //       totReb:
-  //       fgm:
-  //       fga:
-  //       tpm:
-  //       tpa:
-  //       ftm:
-  //       fta:
-  //       pFouls:
-  //       points:
-  //       gamesPlayed:
-  //       gamesStarted:
-  //       plusMinus:
-  //       min:
-  //       dd2:
-  //       td3:
-  //     },
-  //     regularSeason: {
-  //       season:[
-  //         0: {
-  //           seasonyear:
-  //           teams: [
-  //             0:
-  //             1:
-  //           ]
-  //           total:{}
-  //             ppg: "26.5",
-  //             rpg: "4.1",
-  //             apg: "9.5",
-  //             mpg: "34.4",
-  //             topg: "4.1",
-  //             spg: "1.0",
-  //             bpg: "0.1",
-  //             tpp: "38.6",
-  //             ftp: "88.7",
-  //             fgp: "45.2",
-  //             assists:
-  //             blocks:
-  //             steals:
-  //             turnovers:
-  //             offReb:
-  //             defReb:
-  //             totReb:
-  //             fgm:
-  //             fga:
-  //             tpm:
-  //             tpa:
-  //             ftm:
-  //             fta:
-  //             pFouls:
-  //             points:
-  //             gamesPlayed:
-  //             gamesStarted:
-  //             plusMinus:
-  //             min:
-  //             dd2:
-  //             td3:
-  //           }
-  //         }
-  //         1:
-  //       ]
-  //     }
-  // }
 }
