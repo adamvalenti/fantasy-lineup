@@ -1,25 +1,43 @@
 const axios = require("axios");
 
-const urlParam = Object.freeze({
-  STATS: "stats",
+const urlParam = {
+  SEASONAL: "seasonal",
+  RECENT: "recent",
   INFO: "info",
-});
+};
 
-function getUrl(playerId, year, urlParam) {
-  switch (urlParam) {
-    case urlParam.STATS:
-      return (playerStatsUrl =
+function getUrl(playerId, currYear, item) {
+  // find bdlPlayerId from data base
+  var bdlPlayerId = 475;
+  var perPage = 100;
+  switch (item) {
+    case urlParam.SEASONAL:
+      return (
         "http://data.nba.net/10s/prod/v1/" +
-        year +
+        currYear +
         "/players/" +
         playerId +
-        "_profile.json");
+        "_profile.json"
+      );
+    case urlParam.RECENT:
+      //determine date the includes last 10 games from schedule
+      return (
+        "https://www.balldontlie.io/api/v1/stats?start_date=" +
+        "'2021-11-20'" +
+        "&player_ids[]=" +
+        bdlPlayerId +
+        "&per_page=" +
+        perPage
+      );
     case urlParam.INFO:
-      return (playerInfoUrl =
-        "http://data.nba.net/10s/prod/v1/" + year + "/players.json");
+      return "http://data.nba.net/10s/prod/v1/" + currYear + "/players.json";
     default:
       console.log("No URL");
   }
+}
+
+function getYear() {
+  return new Date().getFullYear();
 }
 
 async function getData(playerId) {
@@ -27,49 +45,68 @@ async function getData(playerId) {
     console.log("Reformat player ID");
     return;
   }
+  var currYear = getYear();
 
-  var currYear = new Date().getFullYear();
-  var playerStats = await getPlayerStats(
-    getUrl(playerId, currYear, urlParam.STATS)
+  var seasonalStats = await getSeasonalStats(
+    getUrl(playerId, currYear, urlParam.SEASONAL)
   );
+
+  var recentStats = await getRecentStats(
+    getUrl(playerId, currYear, urlParam.RECENT)
+  );
+
   var playerInfo = await getPlayerInfo(
     getUrl(playerId, currYear, urlParam.INFO),
     playerId
   );
 
-  console.log(playerStats);
-  console.log(playerInfo);
-
   var results = {};
-  var statKeys = Object.keys(playerStats);
+  var seasonalKeys = Object.keys(seasonalStats);
   var infoKeys = Object.keys(playerInfo);
 
   for (let i = 0; i < infoKeys.length; i++) {
     results[infoKeys[i]] = playerInfo[infoKeys[i]];
   }
-  for (let i = 0; i < statKeys.length; i++) {
-    results[statKeys[i]] = playerStats[statKeys[i]];
+  for (let i = 0; i < seasonalKeys.length; i++) {
+    results[seasonalKeys[i]] = seasonalStats[seasonalKeys[i]];
   }
+
+  results.recent = recentStats;
+
   return results;
 }
 
-async function getPlayerStats(url) {
-  // var IsLoaded = false;
-  var playerStats = {};
+async function getRecentStats(url) {
+  var recentStats = [];
   await axios
     .get(url)
     .then((res) => {
-      playerStats = res.data.league.standard.stats;
+      recentStats = res.data.data;
     })
     .catch((err) => {
       console.error(err);
       return err;
     });
-  return playerStats;
+
+  sortStats(recentStats);
+  return recentStats;
+}
+
+async function getSeasonalStats(url) {
+  var seasonalStats = {};
+  await axios
+    .get(url)
+    .then((res) => {
+      seasonalStats = res.data.league.standard.stats;
+    })
+    .catch((err) => {
+      console.error(err);
+      return err;
+    });
+  return seasonalStats;
 }
 
 async function getPlayerInfo(url, playerId) {
-  // var IsLoaded = false;
   var playerInfo = {};
 
   await axios
@@ -92,6 +129,15 @@ async function getPlayerInfo(url, playerId) {
       return err;
     });
   return playerInfo;
+}
+
+function sortStats(stats) {
+  stats.sort(function (a, b) {
+    var dateA = new Date(a.game.date);
+    var dateB = new Date(b.game.date);
+    return dateA - dateB;
+  });
+  return stats;
 }
 
 module.exports = { getData };
