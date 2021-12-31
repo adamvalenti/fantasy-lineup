@@ -1,10 +1,10 @@
-const { getData } = require("./getData.js");
+const requests = require("./apiRequests.js");
+const calculations = require("./calculations.js");
 const { MongoClient } = require("mongodb");
 const config = require("../../config.json");
 
 async function main() {
   const MONGO_CONNECTION_STRING = config.MONGO_CONNECTION_STRING;
-
   const uri =
     "mongodb+srv://adamvalenti:" +
     MONGO_CONNECTION_STRING +
@@ -14,7 +14,11 @@ async function main() {
 
   try {
     await client.connect();
-    await createPlayer(client, await getData("203952"));
+
+    // var advPlayerStats = await calculations.advancedPlayerStats(client,"Andrew Wiggins");
+    // await createPlayer(client, await requests.getPlayerData("203952"));
+    await addGames(client, await requests.getSchedule());
+    // await addTeams(client, await requests.getTeams());
   } catch (error) {
     console.error(error);
   } finally {
@@ -23,6 +27,74 @@ async function main() {
 }
 
 main().catch(console.error);
+
+async function addGames(client, games) {
+  var cleanedGames = [];
+  var game = {};
+  for (let i = 0; i < games.length; i++) {
+    game = {
+      _id: games[i].gameId,
+      seasonStageId: games[i].seasonStageId,
+      gameUrlCode: games[i].gameUrlCode,
+      statusNum: games[i].statusNum,
+      extendedStatusNum: games[i].extendedStatusNum,
+      isStartTimeTBD: games[i].isStartTimeTBD,
+      startTimeUTC: games[i].startTimeUTC,
+      startDateEastern: games[i].startDateEastern,
+      isNeutralVenue: games[i].isNeutralVenue,
+      startTimeEastern: games[i].startTimeEastern,
+      hTeam: {
+        teamId: games[i].hTeam.teamId,
+        score: parseInt(games[i].hTeam.score),
+        win: parseInt(games[i].hTeam.win),
+        loss: parseInt(games[i].hTeam.loss),
+        gamesPlayed:
+          parseInt(games[i].hTeam.win) + parseInt(games[i].hTeam.loss),
+        stats: games[i].hTeam.stats,
+      },
+      vTeam: {
+        teamId: games[i].vTeam.teamId,
+        score: parseInt(games[i].vTeam.score),
+        win: parseInt(games[i].vTeam.win),
+        loss: parseInt(games[i].vTeam.loss),
+        gamesPlayed:
+          parseInt(games[i].vTeam.win) + parseInt(games[i].vTeam.loss),
+        stats: games[i].vTeam.stats,
+      },
+    };
+
+    cleanedGames.push(game);
+  }
+  await client
+    .db("nbaFantasyLineup")
+    .collection("schedule")
+    .insertMany(cleanedGames);
+}
+
+async function addTeams(client, teams) {
+  var cleanedTeams = [];
+  var team = {};
+  for (let i = 0; i < teams.length; i++) {
+    team = {
+      _id: teams[i].teamId,
+      city: teams[i].city,
+      fullName: teams[i].fullName,
+      isNBAFranchise: teams[i].isNBAFranchise,
+      confName: teams[i].confName,
+      tricode: teams[i].tricode,
+      divName: teams[i].divName,
+      nickname: teams[i].nickname,
+      urlName: teams[i].urlName,
+    };
+
+    cleanedTeams.push(team);
+  }
+
+  await client
+    .db("nbaFantasyLineup")
+    .collection("teams")
+    .insertMany(cleanedTeams);
+}
 
 async function createPlayer(client, playerData) {
   var seasonsPlayed = [];
@@ -41,29 +113,29 @@ async function createPlayer(client, playerData) {
         apg: parseFloat(currTeam.apg),
         spg: parseFloat(currTeam.spg),
         bpg: parseFloat(currTeam.bpg),
-        topg: parseFloat(currTeam.topg),
+        tpg: parseFloat(currTeam.topg),
         mpg: parseFloat(currTeam.mpg),
         tpp: parseFloat(currTeam.tpp),
         ftp: parseFloat(currTeam.ftp),
         fgp: parseFloat(currTeam.fgp),
-        points: parseInt(currTeam.points),
-        assists: parseInt(currTeam.assists),
-        blocks: parseInt(currTeam.blocks),
-        steals: parseInt(currTeam.steals),
-        turnovers: parseInt(currTeam.turnovers),
-        offReb: parseInt(currTeam.offReb),
-        defReb: parseInt(currTeam.defReb),
-        totReb: parseInt(currTeam.totReb),
+        pts: parseInt(currTeam.points),
+        ast: parseInt(currTeam.assists),
+        blk: parseInt(currTeam.blocks),
+        stl: parseInt(currTeam.steals),
+        tov: parseInt(currTeam.turnovers),
+        orb: parseInt(currTeam.offReb),
+        drb: parseInt(currTeam.defReb),
+        reb: parseInt(currTeam.totReb),
         fgm: parseInt(currTeam.fgm),
         fga: parseInt(currTeam.fga),
         tpm: parseInt(currTeam.tpm),
         tpa: parseInt(currTeam.tpa),
         ftm: parseInt(currTeam.ftm),
         fta: parseInt(currTeam.fta),
-        pFouls: parseInt(currTeam.pFouls),
-        gamesPlayed: parseInt(currTeam.gamesPlayed),
-        gamesStarted: parseInt(currTeam.gamesStarted),
-        plusMinus: parseInt(currTeam.plusMinus),
+        pf: parseInt(currTeam.pFouls),
+        gp: parseInt(currTeam.gamesPlayed),
+        gs: parseInt(currTeam.gamesStarted),
+        pm: parseInt(currTeam.plusMinus),
         min: parseInt(currTeam.min),
         dd2: parseInt(currTeam.dd2),
         td3: parseInt(currTeam.td3),
@@ -84,24 +156,24 @@ async function createPlayer(client, playerData) {
       tpp: parseFloat(currSeason.total.tpp),
       ftp: parseFloat(currSeason.total.ftp),
       fgp: parseFloat(currSeason.total.fgp),
-      points: parseInt(currSeason.total.points),
-      assists: parseInt(currSeason.total.assists),
-      blocks: parseInt(currSeason.total.blocks),
-      steals: parseInt(currSeason.total.steals),
-      turnovers: parseInt(currSeason.total.turnovers),
-      offReb: parseInt(currSeason.total.offReb),
-      defReb: parseInt(currSeason.total.defReb),
-      totReb: parseInt(currSeason.total.totReb),
+      pts: parseInt(currSeason.total.points),
+      ast: parseInt(currSeason.total.assists),
+      blk: parseInt(currSeason.total.blocks),
+      stl: parseInt(currSeason.total.steals),
+      tov: parseInt(currSeason.total.turnovers),
+      orb: parseInt(currSeason.total.offReb),
+      drb: parseInt(currSeason.total.defReb),
+      reb: parseInt(currSeason.total.totReb),
       fgm: parseInt(currSeason.total.fgm),
       fga: parseInt(currSeason.total.fga),
       tpm: parseInt(currSeason.total.tpm),
       tpa: parseInt(currSeason.total.tpa),
       ftm: parseInt(currSeason.total.ftm),
       fta: parseInt(currSeason.total.fta),
-      pFouls: parseInt(currSeason.total.pFouls),
-      gamesPlayed: parseInt(currSeason.total.gamesPlayed),
-      gamesStarted: parseInt(currSeason.total.gamesStarted),
-      plusMinus: parseInt(currSeason.total.plusMinus),
+      pf: parseInt(currSeason.total.pFouls),
+      gp: parseInt(currSeason.total.gamesPlayed),
+      gs: parseInt(currSeason.total.gamesStarted),
+      pm: parseInt(currSeason.total.plusMinus),
       min: parseInt(currSeason.total.min),
       dd2: parseInt(currSeason.total.dd2),
       td3: parseInt(currSeason.total.td3),
@@ -114,6 +186,15 @@ async function createPlayer(client, playerData) {
 
   for (let i = 0; i < playerData.recent.length; i++) {
     var currGame = playerData.recent[i];
+    var mp = currGame.min;
+
+    if (mp === "") {
+      mp = 0;
+    } else {
+      var mins = parseInt(mp.split(":")[0]);
+      var secs = parseInt(mp.split(":")[1]);
+      mp = secs >= 30 ? mins + 1 : mins;
+    }
 
     var gameStats = {
       bdlPlayerId: currGame.player.id,
@@ -122,15 +203,12 @@ async function createPlayer(client, playerData) {
       date: currGame.game.date,
       pts: currGame.pts,
       ast: currGame.ast,
-      dreb: currGame.dreb,
-      oreb: currGame.oreb,
+      drb: currGame.dreb,
+      orb: currGame.oreb,
       stl: currGame.stl,
       blk: currGame.blk,
-
-      // fix min to integer
-
       tov: currGame.turnover,
-      min: currGame.min,
+      min: mp,
       tpm: currGame.fg3m,
       tpa: currGame.fg3a,
       fgm: currGame.fgm,
@@ -138,7 +216,6 @@ async function createPlayer(client, playerData) {
       ftm: currGame.ftm,
       fta: currGame.fta,
       pf: currGame.pf,
-
       homeTeamId: currGame.game.home_team_id,
       homeTeamScore: currGame.game.home_team_score,
       visitorTeamId: currGame.game.visitor_team_id,
@@ -152,6 +229,7 @@ async function createPlayer(client, playerData) {
   var player = {
     _id: parseInt(playerData.personId),
     name: playerData.firstName + " " + playerData.lastName,
+    playerListId: playerData.listId,
     teamId: parseInt(playerData.teamId),
     jersey: parseInt(playerData.jersey),
     heightFeet: parseInt(playerData.heightFeet),
@@ -169,19 +247,19 @@ async function createPlayer(client, playerData) {
         apg: parseFloat(playerData.latest.apg),
         spg: parseFloat(playerData.latest.spg),
         bpg: parseFloat(playerData.latest.bpg),
-        topg: parseFloat(playerData.latest.topg),
+        tpg: parseFloat(playerData.latest.topg),
         mpg: parseFloat(playerData.latest.mpg),
         tpp: parseFloat(playerData.latest.tpp),
         ftp: parseFloat(playerData.latest.ftp),
         fgp: parseFloat(playerData.latest.fgp),
-        points: parseInt(playerData.latest.points),
-        assists: parseInt(playerData.latest.assists),
-        blocks: parseInt(playerData.latest.blocks),
-        steals: parseInt(playerData.latest.steals),
-        turnovers: parseInt(playerData.latest.turnovers),
-        offReb: parseInt(playerData.latest.offReb),
-        defReb: parseInt(playerData.latest.defReb),
-        totReb: parseInt(playerData.latest.totReb),
+        pts: parseInt(playerData.latest.points),
+        ast: parseInt(playerData.latest.assists),
+        blk: parseInt(playerData.latest.blocks),
+        stl: parseInt(playerData.latest.steals),
+        tov: parseInt(playerData.latest.turnovers),
+        orb: parseInt(playerData.latest.offReb),
+        drb: parseInt(playerData.latest.defReb),
+        reb: parseInt(playerData.latest.totReb),
         fgm: parseInt(playerData.latest.fgm),
         fga: parseInt(playerData.latest.fga),
         tpm: parseInt(playerData.latest.tpm),
@@ -189,9 +267,9 @@ async function createPlayer(client, playerData) {
         ftm: parseInt(playerData.latest.ftm),
         fta: parseInt(playerData.latest.fta),
         pf: parseInt(playerData.latest.pFouls),
-        gamesPlayed: parseInt(playerData.latest.gamesPlayed),
-        gamesStarted: parseInt(playerData.latest.gamesStarted),
-        plusMinus: parseInt(playerData.latest.plusMinus),
+        gp: parseInt(playerData.latest.gamesPlayed),
+        gs: parseInt(playerData.latest.gamesStarted),
+        pm: parseInt(playerData.latest.plusMinus),
         min: parseInt(playerData.latest.min),
         dd2: parseInt(playerData.latest.dd2),
         td3: parseInt(playerData.latest.td3),
@@ -206,24 +284,24 @@ async function createPlayer(client, playerData) {
         tpp: parseFloat(playerData.careerSummary.tpp),
         ftp: parseFloat(playerData.careerSummary.ftp),
         fgp: parseFloat(playerData.careerSummary.fgp),
-        points: parseInt(playerData.careerSummary.points),
-        assists: parseInt(playerData.careerSummary.assists),
-        blocks: parseInt(playerData.careerSummary.blocks),
-        steals: parseInt(playerData.careerSummary.steals),
-        turnovers: parseInt(playerData.careerSummary.turnovers),
-        offReb: parseInt(playerData.careerSummary.offReb),
-        defReb: parseInt(playerData.careerSummary.defReb),
-        totReb: parseInt(playerData.careerSummary.totReb),
+        pts: parseInt(playerData.careerSummary.points),
+        ast: parseInt(playerData.careerSummary.assists),
+        blk: parseInt(playerData.careerSummary.blocks),
+        stl: parseInt(playerData.careerSummary.steals),
+        tov: parseInt(playerData.careerSummary.turnovers),
+        orb: parseInt(playerData.careerSummary.offReb),
+        drb: parseInt(playerData.careerSummary.defReb),
+        reb: parseInt(playerData.careerSummary.totReb),
         fgm: parseInt(playerData.careerSummary.fgm),
         fga: parseInt(playerData.careerSummary.fga),
         tpm: parseInt(playerData.careerSummary.tpm),
         tpa: parseInt(playerData.careerSummary.tpa),
         ftm: parseInt(playerData.careerSummary.ftm),
         fta: parseInt(playerData.careerSummary.fta),
-        pFouls: parseInt(playerData.careerSummary.pFouls),
-        gamesPlayed: parseInt(playerData.careerSummary.gamesPlayed),
-        gamesStarted: parseInt(playerData.careerSummary.gamesStarted),
-        plusMinus: parseInt(playerData.careerSummary.plusMinus),
+        pf: parseInt(playerData.careerSummary.pFouls),
+        gp: parseInt(playerData.careerSummary.gamesPlayed),
+        gs: parseInt(playerData.careerSummary.gamesStarted),
+        pm: parseInt(playerData.careerSummary.plusMinus),
         min: parseInt(playerData.careerSummary.min),
         dd2: parseInt(playerData.careerSummary.dd2),
         td3: parseInt(playerData.careerSummary.td3),
@@ -267,8 +345,6 @@ async function findPlayerByName(client, nameOfPlayer) {
     .collection("players")
     .findOne({ name: nameOfPlayer });
 
-  console.log(result);
-
   if (result) {
     console.log(
       "Found a player in the collection with the name " + nameOfPlayer
@@ -276,6 +352,8 @@ async function findPlayerByName(client, nameOfPlayer) {
   } else {
     console.log("No player found with the name " + nameOfPlayer);
   }
+
+  return result;
 }
 
 async function findPlayersByStatConstraint(
