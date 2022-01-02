@@ -1,11 +1,29 @@
 const axios = require("axios");
 const calculations = require("./calculations.js");
+const mongo = require("./mongo.js");
+const misc = require("./misc.js");
 
-const playerStatsParam = {
-  SEASONAL: "seasonal",
-  RECENT: "recent",
-  INFO: "info",
+const gameStatus = {
+  COMPLETE: "complete",
+  MISSING: "missing",
+  PENDING: "pending",
 };
+
+async function getSeasonYear() {
+  const url = "https://data.nba.net/10s/prod/v1/today.json";
+  var seasonYear;
+  await axios
+    .get(url)
+    .then((res) => {
+      seasonYear = res.data.seasonScheduleYear;
+    })
+    .catch((err) => {
+      console.error(err);
+      return err;
+    });
+
+  return seasonYear;
+}
 
 function getGameUrl(gameDate, gameId) {
   return (
@@ -13,49 +31,18 @@ function getGameUrl(gameDate, gameId) {
   );
 }
 
-async function getPlayerUrl(playerId, item) {
-  // find bdlPlayerId from data base
-  var bdlPlayerId = 475;
-  var perPage = 100;
-  switch (item) {
-    case playerStatsParam.SEASONAL:
-      return (
-        "http://data.nba.net/10s/prod/v1/" +
-        getYear() +
-        "/players/" +
-        playerId +
-        "_profile.json"
-      );
-    case playerStatsParam.RECENT:
-      //determine date the includes last 10 games from schedule
-      return (
-        "https://www.balldontlie.io/api/v1/stats?start_date=" +
-        "'2021-11-20'" +
-        "&player_ids[]=" +
-        bdlPlayerId +
-        "&per_page=" +
-        perPage
-      );
-    case playerStatsParam.INFO:
-      return "http://data.nba.net/10s/prod/v1/" + getYear() + "/players.json";
-    default:
-      console.log("No URL");
-  }
+function getPlayerStatsUrl(seasonYear, playerId) {
+  return (
+    "https://data.nba.net/10s/prod/v1/" +
+    seasonYear +
+    "/players/" +
+    playerId +
+    "_profile.json"
+  );
 }
 
-function getYear() {
-  return new Date().getFullYear();
-}
-
-function gameBeenPlayed(dateString) {
-  var year = dateString.substring(0, 4);
-  var month = dateString.substring(4, 6);
-  var day = dateString.substring(6, 8);
-
-  var date = new Date(year, month - 1, day);
-  var currDate = new Date();
-
-  return date < currDate;
+function getPlayersUrl(seasonYear) {
+  return "https://data.nba.net/10s/prod/v1/" + seasonYear + "/players.json";
 }
 
 async function getGameStats(url) {
@@ -77,48 +64,22 @@ async function getGameStats(url) {
       if (results == undefined) {
         return null;
       }
-      var minsPlayed = calculations.minPlayedConversion(
-        results.hTeam.totals.min
-      );
-
-      gameStats.vTeam.team.pts = parseInt(results.vTeam.totals.points);
-      gameStats.vTeam.team.ast = parseInt(results.vTeam.totals.assists);
-      gameStats.vTeam.team.drb = parseInt(results.vTeam.totals.defReb);
-      gameStats.vTeam.team.orb = parseInt(results.vTeam.totals.offReb);
-      gameStats.vTeam.team.stl = parseInt(results.vTeam.totals.steals);
-      gameStats.vTeam.team.blk = parseInt(results.vTeam.totals.blocks);
-      gameStats.vTeam.team.tov = parseInt(results.vTeam.totals.turnovers);
-      gameStats.vTeam.team.fgm = parseInt(results.vTeam.totals.fgm);
-      gameStats.vTeam.team.fga = parseInt(results.vTeam.totals.fga);
-      gameStats.vTeam.team.tpm = parseInt(results.vTeam.totals.tpm);
-      gameStats.vTeam.team.tpa = parseInt(results.vTeam.totals.tpa);
-      gameStats.vTeam.team.ftm = parseInt(results.vTeam.totals.ftm);
-      gameStats.vTeam.team.fta = parseInt(results.vTeam.totals.fta);
-      gameStats.vTeam.team.mp = minsPlayed;
-      gameStats.vTeam.team.pf = parseInt(results.vTeam.totals.pFouls);
-      gameStats.vTeam.team.tf = parseInt(results.vTeam.totals.team_fouls);
-
-      gameStats.hTeam.team.pts = parseInt(results.hTeam.totals.points);
-      gameStats.hTeam.team.ast = parseInt(results.hTeam.totals.assists);
-      gameStats.hTeam.team.drb = parseInt(results.hTeam.totals.defReb);
-      gameStats.hTeam.team.orb = parseInt(results.hTeam.totals.offReb);
-      gameStats.hTeam.team.stl = parseInt(results.hTeam.totals.steals);
-      gameStats.hTeam.team.blk = parseInt(results.hTeam.totals.blocks);
-      gameStats.hTeam.team.tov = parseInt(results.hTeam.totals.turnovers);
-      gameStats.hTeam.team.fgm = parseInt(results.hTeam.totals.fgm);
-      gameStats.hTeam.team.fga = parseInt(results.hTeam.totals.fga);
-      gameStats.hTeam.team.tpm = parseInt(results.hTeam.totals.tpm);
-      gameStats.hTeam.team.tpa = parseInt(results.hTeam.totals.tpa);
-      gameStats.hTeam.team.ftm = parseInt(results.hTeam.totals.ftm);
-      gameStats.hTeam.team.fta = parseInt(results.hTeam.totals.fta);
-      gameStats.hTeam.team.mp = minsPlayed;
-      gameStats.hTeam.team.pf = parseInt(results.hTeam.totals.pFouls);
-      gameStats.hTeam.team.tf = parseInt(results.hTeam.totals.team_fouls);
-
+      var minsPlayed = calculations.minutesPlayed(results.hTeam.totals.min);
       var hId = res.data.basicGameData.hTeam.teamId;
 
+      misc.assignTeamStats(
+        gameStats.vTeam.team,
+        results.vTeam.totals,
+        minsPlayed
+      );
+      misc.assignTeamStats(
+        gameStats.hTeam.team,
+        results.hTeam.totals,
+        minsPlayed
+      );
+
       for (let i = 0; i < results.activePlayers.length; i++) {
-        var minsPlayed = calculations.minPlayedConversion(
+        var minsPlayed = calculations.minutesPlayed(
           results.activePlayers[i].min
         );
 
@@ -163,22 +124,13 @@ async function getSchedule() {
   const url = "http://data.nba.net/10s/prod/v1/2021/schedule.json";
 
   var games = [];
-  var mostRecentGame = 0;
+
   await axios
     .get(url)
-    .then(async function (res) {
+    .then((res) => {
       games = res.data.league.standard;
-      for (let i = mostRecentGame; i < games.length; i++) {
-        if (gameBeenPlayed(games[i].startDateEastern)) {
-          var gameStats = await getGameStats(
-            getGameUrl(games[i].startDateEastern, games[i].gameId)
-          );
-
-          games[i].hTeam.stats = gameStats.hTeam;
-          games[i].vTeam.stats = gameStats.vTeam;
-        } else {
-          break;
-        }
+      for (let i = 0; i < games.length; i++) {
+        games[i].gameStatus = gameStatus.PENDING;
       }
     })
     .catch((err) => {
@@ -186,6 +138,52 @@ async function getSchedule() {
       return err;
     });
   return games;
+}
+
+async function getUpdatedSchedule(gameIds) {
+  var cleanedGames = [];
+  var games = await getSchedule();
+
+  for (let i = 0; i < games.length; i++) {
+    if (games[i].gameId == gameIds[0]) {
+      cleanedGames = games.splice(i, gameIds.length);
+      break;
+    }
+  }
+  for (let i = 0; i < cleanedGames.length; i++) {
+    var gameStats = await getGameStats(
+      getGameUrl(cleanedGames[i].startDateEastern, cleanedGames[i].gameId)
+    );
+    if (gameStats == null) {
+      cleanedGames[i].gameStatus = gameStatus.MISSING;
+    } else {
+      cleanedGames[i].gameStatus = gameStatus.COMPLETE;
+      cleanedGames[i].hTeam.stats = gameStats.hTeam;
+      cleanedGames[i].vTeam.stats = gameStats.vTeam;
+
+      for (let j = 0; j < cleanedGames[i].hTeam.stats.player.length; j++) {
+        if (cleanedGames[i].hTeam.stats.player[j].mp != 0) {
+          cleanedGames[i].hTeam.stats.player[j].advanced =
+            calculations.advancedPlayerStats(
+              cleanedGames[i].hTeam.stats.player[j],
+              cleanedGames[i].hTeam.stats.team,
+              cleanedGames[i].vTeam.stats.team
+            );
+        }
+      }
+      for (let j = 0; j < cleanedGames[i].vTeam.stats.player.length; j++) {
+        if (cleanedGames[i].vTeam.stats.player[j].mp != 0) {
+          cleanedGames[i].vTeam.stats.player[j].advanced =
+            calculations.advancedPlayerStats(
+              cleanedGames[i].vTeam.stats.player[j],
+              cleanedGames[i].vTeam.stats.team,
+              cleanedGames[i].hTeam.stats.team
+            );
+        }
+      }
+    }
+  }
+  return cleanedGames;
 }
 
 async function getTeams() {
@@ -204,55 +202,27 @@ async function getTeams() {
   return teams;
 }
 
-async function getPlayerData(playerId) {
-  if (typeof playerId != "string") {
-    console.log("Reformat player ID");
-    return;
-  }
-
-  var seasonalStats = await getSeasonalStats(
-    getPlayerUrl(playerId, playerStatsParam.SEASONAL)
-  );
-
-  var recentStats = await getRecentStats(
-    getPlayerUrl(playerId, playerStatsParam.RECENT)
-  );
-
-  var playerInfo = await getPlayerInfo(
-    getPlayerUrl(playerId, playerStatsParam.INFO),
-    playerId
-  );
-
-  var results = {};
-  var seasonalKeys = Object.keys(seasonalStats);
-  var infoKeys = Object.keys(playerInfo);
-
-  for (let i = 0; i < infoKeys.length; i++) {
-    results[infoKeys[i]] = playerInfo[infoKeys[i]];
-  }
-  for (let i = 0; i < seasonalKeys.length; i++) {
-    results[seasonalKeys[i]] = seasonalStats[seasonalKeys[i]];
-  }
-
-  results.recent = recentStats;
-
-  return results;
-}
-
-async function getRecentStats(url) {
-  var recentStats = [];
+async function getPlayers() {
+  var seasonYear = await getSeasonYear();
+  var url = getPlayersUrl(seasonYear);
+  var players = [];
   await axios
     .get(url)
-    .then((res) => {
-      recentStats = res.data.data;
+    .then(async function (res) {
+      players = res.data.league.standard;
+      for (let i = 0; i < players.length; i++) {
+        players[i].stats = {
+          regularSeason: await getSeasonalStats(
+            getPlayerStatsUrl(seasonYear, players[i].personId)
+          ),
+        };
+      }
     })
     .catch((err) => {
       console.error(err);
       return err;
     });
-
-  sortStats(recentStats);
-  return recentStats;
+  return players;
 }
 
 async function getSeasonalStats(url) {
@@ -260,7 +230,7 @@ async function getSeasonalStats(url) {
   await axios
     .get(url)
     .then((res) => {
-      seasonalStats = res.data.league.standard.stats;
+      seasonalStats = res.data.league.standard.stats.regularSeason;
     })
     .catch((err) => {
       console.error(err);
@@ -269,40 +239,7 @@ async function getSeasonalStats(url) {
   return seasonalStats;
 }
 
-async function getPlayerInfo(url, playerId) {
-  var playerInfo = {};
-  await axios
-    .get(url, { params: { firstName: "Andrew", personId: playerId } })
-    .then((res) => {
-      var players = res.data.league.standard;
-      var keys = Object.keys(players);
-      console.log(players);
-      for (let i = 0; i < keys.length; i++) {
-        if (players[i].personId === playerId) {
-          playerInfo = players[i];
-          playerInfo.listId = i;
-          break;
-        } else if (i === keys.length) {
-          console.log("No player found with Id " + playerId);
-        }
-      }
-    })
-    .catch((err) => {
-      console.error(err);
-      return err;
-    });
-  return playerInfo;
-}
-
-function sortStats(stats) {
-  stats.sort(function (a, b) {
-    var dateA = new Date(a.game.date);
-    var dateB = new Date(b.game.date);
-    return dateA - dateB;
-  });
-  return stats;
-}
-
-module.exports.getPlayerData = getPlayerData;
 module.exports.getTeams = getTeams;
+module.exports.getUpdatedSchedule = getUpdatedSchedule;
 module.exports.getSchedule = getSchedule;
+module.exports.getPlayers = getPlayers;

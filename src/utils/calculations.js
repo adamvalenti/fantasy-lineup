@@ -26,7 +26,7 @@ Opp_FG% = opponent field goal percentage
 
 */
 
-function minPlayedConversion(minsPlayed) {
+function minutesPlayed(minsPlayed) {
   if (minsPlayed === "") {
     minsPlayed = 0;
   } else {
@@ -37,89 +37,15 @@ function minPlayedConversion(minsPlayed) {
   return minsPlayed;
 }
 
-function advancedPlayerStats(gameData) {
-  // take in an array of data (gameData) for 20 games (player, team, opponent)
+function advancedPlayerStats(player, team, opponent) {
+  team.pos = numOfTeamPos(team, opponent);
 
-  // game data format
-  /* 
-  gameData = [{
-    0: {  
-      player = {
-        pts: 0,
-        ast: 0,
-        drb: 0,
-        orb: 0,
-        stl: 0,
-        blk: 0,
-        tov: 0,
-        fgm: 0,
-        fga: 0,
-        tpm: 0,
-        tpa: 0,
-        ftm: 0,
-        fta: 0,
-        mp: 0,
-        pf: 0,
-      },
-      team: {
-        pts: 0,
-        ast: 0,
-        drb: 0,
-        orb: 0,
-        stl: 0,
-        blk: 0,
-        tov: 0,
-        fgm: 0,
-        fga: 0,
-        tpm: 0,
-        tpa: 0,
-        ftm: 0,
-        fta: 0,
-        mp: 0,
-        pf: 0
-      },
-      opponent: {
-        pts: 0,
-        ast: 0,
-        drb: 0,
-        orb: 0,
-        stl: 0,
-        blk: 0,
-        tov: 0,
-        fgm: 0,
-        fga: 0,
-        tpm: 0,
-        tpa: 0,
-        ftm: 0,
-        fta: 0,
-        mp: 0,
-        pf: 0
-      }
-    }
-  }]
-  */
-  var advStats = [];
+  var advancedStats = {
+    ortg: playerOffRtg(player, team, opponent),
+    drtg: playerDefRtg(player, team, opponent),
+  };
 
-  for (let i = 0; i < gameData.length; i++) {
-    var advGameStats = {};
-    gameData[i].team.pos = numOfTeamPos(gameData[i].team, gameData[i].opponent);
-
-    advGameStats.ortg = playerOffRtg(
-      gameData[i].player,
-      gameDate[i].team,
-      gameData[i].opponent
-    );
-    advGameStats.drtg = playerDefRtg(
-      gameData[i].player,
-      gameDate[i].team,
-      gameData[i].opponent
-    );
-
-    console.log(advGameStats);
-    advStats.push(advGameStats);
-  }
-
-  return advStats;
+  return advancedStats;
 }
 
 function teamPos(team, opponent) {
@@ -132,48 +58,58 @@ function teamPos(team, opponent) {
 }
 
 function numOfTeamPos(team, opponent) {
-  return 0.5 * (teamPos(team, opponent) + teamPos(opponent, team));
+  return Math.round(0.5 * (teamPos(team, opponent) + teamPos(opponent, team)));
 }
 
 function playerOffRtg(player, team, opponent) {
-  var scPoss =
-    (fgPart + astPart + ftPart) *
-      (1 - (team.orb / teamScPoss) * teamOrbWeight * teamPlayPer) +
-    orbPart;
-
   var qAST =
     (player.mp / (team.mp / 5)) *
       (1.14 * ((team.ast - player.ast) / team.fgm)) +
     (((team.ast / team.mp) * player.mp * 5 - player.ast) /
       ((team.fgm / team.mp) * player.mp * 5 - player.fgm)) *
       (1 - player.mp / (team.mp / 5));
+
   var fgPart =
     player.fgm *
     (1 - 0.5 * ((player.pts - player.ftm) / (2 * player.fga)) * qAST);
+
   var astPart =
     0.5 *
     ((team.pts - team.ftm - (player.pts - player.ftm)) /
       (2 * (team.fga - player.fga))) *
     player.ast;
+
   var ftPart = ((1 - (1 - player.ftm / player.fta)) ^ 2) * 0.4 * player.fta;
+
   var teamScPoss =
     team.fgm + ((1 - (1 - team.ftm / team.fta)) ^ 2) * team.fta * 0.4;
 
   var teamOrbPer = team.orb / (team.orb + opponent.drb);
+
   var teamPlayPer = teamScPoss / (team.fga + team.fta * 0.4 + team.tov);
+
   var teamOrbWeight =
     ((1 - teamOrbPer) * teamPlayPer) /
     ((1 - teamOrbPer) * teamPlayPer + teamOrbPer * (1 - teamPlayPer));
+
   var orbPart = player.orb * teamOrbWeight * teamPlayPer;
 
+  var scPoss =
+    (fgPart + astPart + ftPart) *
+      (1 - (team.orb / teamScPoss) * teamOrbWeight * teamPlayPer) +
+    orbPart;
+
   var fgxPoss = (player.fga - player.fgm) * (1 - 1.07 * teamOrbPer);
+
   var ftxPoss = ((1 - player.ftm / player.fta) ^ 2) * 0.4 * player.fta;
+
   var totPoss = scPoss + fgxPoss + ftxPoss + player.tov;
 
   var ptsProdFgPart =
     2 *
     (player.fgm + 0.5 * player.tpm) *
     (1 - 0.5 * ((player.pts - player.ftm) / (2 * player.fga)) * qAST);
+
   var ptsProdAstPart =
     2 *
     ((team.fgm - player.fgm + 0.5 * (team.tpm - player.tpm)) /
@@ -182,6 +118,7 @@ function playerOffRtg(player, team, opponent) {
     ((team.pts - team.ftm - (player.pts - player.ftm)) /
       (2 * (team.fga - player.fga))) *
     player.ast;
+
   var ptsProdOrbPart =
     player.orb *
     teamOrbWeight *
@@ -232,4 +169,4 @@ function playerDefRtg(player, team, opponent) {
 }
 
 module.exports.advancedPlayerStats = advancedPlayerStats;
-module.exports.minPlayedConversion = minPlayedConversion;
+module.exports.minutesPlayed = minutesPlayed;
