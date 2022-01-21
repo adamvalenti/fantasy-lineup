@@ -4,13 +4,19 @@ function playerAge(dateString) {
   var day = dateString.substring(8, 9);
 
   var dateOfBirth = new Date(year, month - 1, day);
-  var today = new Date();
+  var today = currentDate();
   var age = today.getFullYear() - dateOfBirth.getFullYear();
   var m = today.getMonth() - dateOfBirth.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < dateOfBirth.getDate())) {
     age--;
   }
   return age;
+}
+
+function currentDate() {
+  var currDate = new Date();
+  currDate.setHours(0, 0, 0, 0);
+  return currDate;
 }
 
 function convertDate(dateString) {
@@ -23,8 +29,7 @@ function convertDate(dateString) {
 
 function playedGame(dateString) {
   var date = convertDate(dateString);
-  var currDate = new Date();
-  currDate.setHours(0, 0, 0, 0);
+  var currDate = currentDate();
 
   return date < currDate;
 }
@@ -181,6 +186,7 @@ function formatPlayer(player) {
     cleanedPlayer = {
       _id: player.personId,
       name: player.firstName + " " + player.lastName,
+      pos: player.teamSitesOnly.posFull,
       teamId: player.teamId,
       jersey: parseInt(player.jersey),
       heightFeet: parseInt(player.heightFeet),
@@ -216,9 +222,38 @@ function formatPlayer(player) {
   return cleanedPlayer;
 }
 
+function assignPlayerStats(player, minsPlayed, matchups) {
+  var playerStats = {
+    playerId: player.personId,
+    name: player.firstName + " " + player.lastName,
+    matchups: matchups,
+    pos: player.pos,
+    pts: parseInt(player.points),
+    ast: parseInt(player.assists),
+    drb: parseInt(player.defReb),
+    orb: parseInt(player.offReb),
+    stl: parseInt(player.steals),
+    blk: parseInt(player.blocks),
+    tov: parseInt(player.turnovers),
+    fgm: parseInt(player.fgm),
+    fga: parseInt(player.fga),
+    tpm: parseInt(player.tpm),
+    tpa: parseInt(player.tpa),
+    ftm: parseInt(player.ftm),
+    fta: parseInt(player.fta),
+    mp: minsPlayed,
+    pf: parseInt(player.pFouls),
+  };
+
+  return playerStats;
+}
+
+module.exports.playerAge = playerAge;
 module.exports.convertDate = convertDate;
+module.exports.currentDate = currentDate;
 module.exports.playedGame = playedGame;
 module.exports.sortStats = sortStats;
 module.exports.assignTeamStats = assignTeamStats;
 module.exports.formatGame = formatGame;
 module.exports.formatPlayer = formatPlayer;
+module.exports.assignPlayerStats = assignPlayerStats;

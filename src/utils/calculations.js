@@ -37,12 +37,13 @@ function minutesPlayed(minsPlayed) {
   return minsPlayed;
 }
 
-function advancedPlayerStats(player, team, opponent) {
-  team.pos = numOfTeamPos(team, opponent);
-
+function advancedPlayerStats(player, team, opponent, league) {
   var advancedStats = {
+    fp: playerFantasyPoints(player),
     ortg: playerOffRtg(player, team, opponent),
     drtg: playerDefRtg(player, team, opponent),
+    // per: playerEffRtg(player, team, league),
+    usg: playerUsage(player, team),
   };
 
   return advancedStats;
@@ -59,6 +60,33 @@ function teamPos(team, opponent) {
 
 function numOfTeamPos(team, opponent) {
   return Math.round(0.5 * (teamPos(team, opponent) + teamPos(opponent, team)));
+}
+
+function teamPace(team, opponent) {
+  var pace = 48 * ((team.pos + opponent.pos) / (2 * (team.mp / 5)));
+
+  return pace;
+}
+
+function playerFantasyPoints(player) {
+  const sliders = {
+    pts: 1,
+    ast: 1.5,
+    reb: 1.2,
+    stl: 3,
+    blk: 3,
+    tov: -1,
+  };
+
+  var fantasyPoints =
+    player.pts * sliders.pts +
+    player.ast * sliders.ast +
+    (player.orb + player.drb) * sliders.reb +
+    player.stl * sliders.stl +
+    player.blk * sliders.blk +
+    player.tov * sliders.tov;
+
+  return fantasyPoints;
 }
 
 function playerOffRtg(player, team, opponent) {
@@ -168,5 +196,148 @@ function playerDefRtg(player, team, opponent) {
   return playerDRtg;
 }
 
+function leagueConstants() {
+  // var league = {
+  //   factor:
+  //     2 / 3 - (0.5 * (leagueStats.ast / leagueStats.fgm)) / (2 * (leagueStats.fgm / leagueStats.ftm));
+  //   vop:
+  //     leagueStats.pts / (leagueStats.fga - leagueStats.orb + leagueStats.tov + 0.44 * leagueStats.fta);
+  //   drbp: leagueStats.drb / (leagueStats.drb + leagueStats.orb);
+  // }
+
+  // stats from basketball reference, 2020-2021 stats used. https://www.basketball-reference.com/leagues/NBA_stats_per_game.html
+
+  // would be cool if leauge averages were projected for next season to help predict player improvement
+
+  leagueStats = {
+    pts: 112.1,
+    ast: 24.8,
+    orb: 9.8,
+    drb: 34.5,
+    tov: 13.8,
+    fgm: 41.2,
+    fga: 88.4,
+    ftm: 17.0,
+    fta: 21.8,
+    pf: 19.3,
+    pace: 99.2,
+  };
+
+  var league = {
+    factor:
+      2 / 3 -
+      (0.5 * (24.8 / leagueStats.fgm)) /
+        (2 * (leagueStats.fgm / leagueStats.ftm)),
+    vop:
+      leagueStats.pts /
+      (leagueStats.fga -
+        leagueStats.orb +
+        leagueStats.tov +
+        0.44 * leagueStats.fta),
+    drbp: leagueStats.drb / (leagueStats.drb + leagueStats.orb),
+    ftmpf: leagueStats.ftm / leagueStats.pf,
+    ftapf: leagueStats.fta / leagueStats.pf,
+    pace: leagueStats.pace,
+  };
+  return league;
+}
+
+function playerEffRtg(player, team, league) {
+  var uPER =
+    (1 / player.mp) *
+    (player.tpm +
+      (2 / 3) * player.ast +
+      (2 - league.factor * (team.ast / team.fgm)) * player.fgm +
+      player.ftm *
+        0.5 *
+        (1 + (1 - team.ast / team.fgm) + (2 / 3) * (team.ast / team.fgm)) -
+      league.vop * player.tov -
+      league.vop * league.drbp * (player.fga - player.fgm) -
+      league.vop *
+        0.44 *
+        (0.44 + 0.56 * league.drbp) *
+        (player.fta - player.ftm) +
+      league.vop * (1 - league.drbp) * player.drb +
+      league.vop * league.drbp * player.orb +
+      league.vop * player.stl +
+      league.vop * league.drbp * player.blk -
+      player.pf * (league.ftmpf - 0.44 * league.ftapf * league.vop));
+
+  var aPER = (league.pace / team.pace) * uPER;
+
+  var PER = aPER * 54;
+
+  return PER;
+}
+
+function playerUsage(player, team) {
+  var usage =
+    (100 * ((player.fga + 0.44 * player.fta + player.tov) * (team.mp / 5))) /
+    (player.mp * (team.fga + 0.44 * team.fta + team.tov));
+
+  return usage;
+}
+
+function lastNStats(stats) {
+  var processedStats = {
+    last3: {},
+    last5: {},
+    last7: {},
+    last10: {},
+  };
+}
+
+function matchupStats(opponents, matchups) {
+  // right not matchup percentage wont add to 1, need to scale accordingly (assume 1 for now)
+
+  var weightedStats = {
+    pts: 0,
+    ast: 0,
+    drb: 0,
+    orb: 0,
+    stl: 0,
+    blk: 0,
+    tov: 0,
+    fgm: 0,
+    fga: 0,
+    tpm: 0,
+    tpa: 0,
+    ftm: 0,
+    fta: 0,
+    mp: 0,
+    pf: 0,
+  };
+  var matchup = {};
+
+  for (let i = 0; i < matchups.length; i++) {
+    matchup = opponents.filter((player) => {
+      return player.playerId === matchups.playerId;
+    });
+    weightedStats = {
+      pts: weightedStats.pts + matchup.playerStats.pts,
+      ast: weightedStats.ast + matchup.playerStats.ast,
+      drb: weightedStats.drb + matchup.playerStats.drb,
+      orb: weightedStats.orb + matchup.playerStats.orb,
+      stl: weightedStats.stl + matchup.playerStats.stl,
+      blk: weightedStats.blk + matchup.playerStats.blk,
+      tov: weightedStats.tov + matchup.playerStats.tov,
+      fgm: weightedStats.fgm + matchup.playerStats.fgm,
+      fga: weightedStats.fga + matchup.playerStats.fga,
+      tpm: weightedStats.tpm + matchup.playerStats.tpm,
+      tpa: weightedStats.tpa + matchup.playerStats.tpa,
+      ftm: weightedStats.ftm + matchup.playerStats.ftm,
+      fta: weightedStats.fta + matchup.playerStats.fta,
+      mp: weightedStats.mp + matchup.playerStats.mp,
+      pf: weightedStats.pf + matchup.playerStats.pf,
+    };
+  }
+
+  return weightedStats;
+}
+
 module.exports.advancedPlayerStats = advancedPlayerStats;
 module.exports.minutesPlayed = minutesPlayed;
+module.exports.leagueConstants = leagueConstants;
+module.exports.numOfTeamPos = numOfTeamPos;
+module.exports.teamPace = teamPace;
+module.exports.lastNStats = lastNStats;

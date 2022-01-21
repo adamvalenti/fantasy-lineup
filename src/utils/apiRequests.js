@@ -64,18 +64,32 @@ async function getGameStats(url) {
       if (results == undefined) {
         return null;
       }
-      var minsPlayed = calculations.minutesPlayed(results.hTeam.totals.min);
+      var teamMinsPlayed = calculations.minutesPlayed(results.hTeam.totals.min);
       var hId = res.data.basicGameData.hTeam.teamId;
+      var hTeamPositions = {
+        PG: [],
+        SG: [],
+        SF: [],
+        PF: [],
+        C: [],
+      };
+      var vTeamPositions = {
+        PG: [],
+        SG: [],
+        SF: [],
+        PF: [],
+        C: [],
+      };
 
       misc.assignTeamStats(
         gameStats.vTeam.team,
         results.vTeam.totals,
-        minsPlayed
+        teamMinsPlayed
       );
       misc.assignTeamStats(
         gameStats.hTeam.team,
         results.hTeam.totals,
-        minsPlayed
+        teamMinsPlayed
       );
 
       for (let i = 0; i < results.activePlayers.length; i++) {
@@ -83,32 +97,40 @@ async function getGameStats(url) {
           results.activePlayers[i].min
         );
 
-        var playerStats = {
-          playerId: parseInt(results.activePlayers[i].personId),
-          name:
-            results.activePlayers[i].firstName +
-            " " +
-            results.activePlayers[i].lastName,
-          pts: parseInt(results.activePlayers[i].points),
-          ast: parseInt(results.activePlayers[i].assists),
-          drb: parseInt(results.activePlayers[i].defReb),
-          orb: parseInt(results.activePlayers[i].offReb),
-          stl: parseInt(results.activePlayers[i].steals),
-          blk: parseInt(results.activePlayers[i].blocks),
-          tov: parseInt(results.activePlayers[i].turnovers),
-          fgm: parseInt(results.activePlayers[i].fgm),
-          fga: parseInt(results.activePlayers[i].fga),
-          tpm: parseInt(results.activePlayers[i].tpm),
-          tpa: parseInt(results.activePlayers[i].tpa),
-          ftm: parseInt(results.activePlayers[i].ftm),
-          fta: parseInt(results.activePlayers[i].fta),
-          mp: minsPlayed,
-          pf: parseInt(results.activePlayers[i].pFouls),
-        };
+        // Right now not accurate because some players can play at the same time.
+
+        if (results.activePlayers[i].teamId == hId && minsPlayed > 0) {
+          hTeamPositions[results.activePlayers[i].pos].push({
+            playerId: results.activePlayers[i].personId,
+            matchupPercentage: (minsPlayed / teamMinsPlayed) * 5,
+          });
+        } else if (minsPlayed > 0) {
+          vTeamPositions[results.activePlayers[i].pos].push({
+            playerId: results.activePlayers[i].personId,
+            matchupPercentage: (minsPlayed / teamMinsPlayed) * 5,
+          });
+        }
+      }
+
+      for (let i = 0; i < results.activePlayers.length; i++) {
+        var minsPlayed = calculations.minutesPlayed(
+          results.activePlayers[i].min
+        );
+        var playerStats = {};
 
         if (results.activePlayers[i].teamId == hId) {
+          playerStats = misc.assignPlayerStats(
+            results.activePlayers[i],
+            minsPlayed,
+            vTeamPositions[results.activePlayers[i].pos]
+          );
           gameStats.hTeam.player.push(playerStats);
         } else {
+          playerStats = misc.assignPlayerStats(
+            results.activePlayers[i],
+            minsPlayed,
+            hTeamPositions[results.activePlayers[i].pos]
+          );
           gameStats.vTeam.player.push(playerStats);
         }
       }
@@ -140,13 +162,14 @@ async function getSchedule() {
   return games;
 }
 
-async function getUpdatedSchedule(gameIds) {
+async function getUpdatedSchedule(newGames) {
   var cleanedGames = [];
   var games = await getSchedule();
+  // var league = calculations.leagueConstants();
 
   for (let i = 0; i < games.length; i++) {
-    if (games[i].gameId == gameIds[0]) {
-      cleanedGames = games.splice(i, gameIds.length);
+    if (games[i].gameId == newGames[0].gameId) {
+      cleanedGames = games.splice(i, newGames.length);
       break;
     }
   }
@@ -161,26 +184,46 @@ async function getUpdatedSchedule(gameIds) {
       cleanedGames[i].hTeam.stats = gameStats.hTeam;
       cleanedGames[i].vTeam.stats = gameStats.vTeam;
 
-      for (let j = 0; j < cleanedGames[i].hTeam.stats.player.length; j++) {
-        if (cleanedGames[i].hTeam.stats.player[j].mp != 0) {
-          cleanedGames[i].hTeam.stats.player[j].advanced =
-            calculations.advancedPlayerStats(
-              cleanedGames[i].hTeam.stats.player[j],
-              cleanedGames[i].hTeam.stats.team,
-              cleanedGames[i].vTeam.stats.team
-            );
-        }
-      }
-      for (let j = 0; j < cleanedGames[i].vTeam.stats.player.length; j++) {
-        if (cleanedGames[i].vTeam.stats.player[j].mp != 0) {
-          cleanedGames[i].vTeam.stats.player[j].advanced =
-            calculations.advancedPlayerStats(
-              cleanedGames[i].vTeam.stats.player[j],
-              cleanedGames[i].vTeam.stats.team,
-              cleanedGames[i].hTeam.stats.team
-            );
-        }
-      }
+      cleanedGames[i].hTeam.stats.team.pos = calculations.numOfTeamPos(
+        cleanedGames[i].hTeam.stats.team,
+        cleanedGames[i].vTeam.stats.team
+      );
+      cleanedGames[i].hTeam.stats.team.pace = calculations.teamPace(
+        cleanedGames[i].hTeam.stats.team,
+        cleanedGames[i].vTeam.stats.team
+      );
+
+      cleanedGames[i].vTeam.stats.team.pos = calculations.numOfTeamPos(
+        cleanedGames[i].vTeam.stats.team,
+        cleanedGames[i].hTeam.stats.team
+      );
+      cleanedGames[i].vTeam.stats.team.pace = calculations.teamPace(
+        cleanedGames[i].vTeam.stats.team,
+        cleanedGames[i].hTeam.stats.team
+      );
+
+      // for (let j = 0; j < cleanedGames[i].hTeam.stats.player.length; j++) {
+      //   if (cleanedGames[i].hTeam.stats.player[j].mp != 0) {
+      //     cleanedGames[i].hTeam.stats.player[j].advanced =
+      //       calculations.advancedPlayerStats(
+      //         cleanedGames[i].hTeam.stats.player[j],
+      //         cleanedGames[i].hTeam.stats.team,
+      //         cleanedGames[i].vTeam.stats.team,
+      //         league
+      //       );
+      //   }
+      // }
+      // for (let j = 0; j < cleanedGames[i].vTeam.stats.player.length; j++) {
+      //   if (cleanedGames[i].vTeam.stats.player[j].mp != 0) {
+      //     cleanedGames[i].vTeam.stats.player[j].advanced =
+      //       calculations.advancedPlayerStats(
+      //         cleanedGames[i].vTeam.stats.player[j],
+      //         cleanedGames[i].vTeam.stats.team,
+      //         cleanedGames[i].hTeam.stats.team,
+      //         league
+      //       );
+      //   }
+      // }
     }
   }
   return cleanedGames;
