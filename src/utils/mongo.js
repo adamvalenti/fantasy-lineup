@@ -15,6 +15,40 @@ async function mongoClient() {
   return client;
 }
 
+//function to update teams roster
+
+async function main() {
+  const client = await mongoClient();
+
+  try {
+    await client.connect();
+    // await addGames(client, await requests.getSchedule());
+    // console.log("Games Added");
+    await addPlayers(client, await requests.getPlayers());
+    console.log("Players Added");
+    var games = await requests.getUpdatedSchedule(
+      gamesToBeUpdated(await toBeUpdated())
+    );
+
+    console.log("Schedule Retrieved");
+    await updatePlayers(
+      await playersWithBirthdays(),
+      await playersToBeUpdated(games)
+    );
+
+    console.log("Players Updated");
+    await updateGames(client, games);
+    console.log("Games Updated");
+    // await addTeams(client, await requests.getTeams());
+  } catch (error) {
+    console.error(error);
+  } finally {
+    await client.close();
+  }
+}
+
+main().catch(console.error);
+
 async function toBeUpdated() {
   const client = await mongoClient();
   var results = [];
@@ -27,6 +61,7 @@ async function toBeUpdated() {
       .db("nbaFantasyLineup")
       .collection("schedule")
       .find({ gameStatus: "pending", startDateEastern: { $lt: currDate } });
+    // .find({ _id: "0012100012" });
     results = await cursor.toArray();
   } catch (error) {
     console.error(error);
@@ -36,151 +71,136 @@ async function toBeUpdated() {
   }
 }
 
-async function updateData() {
-  var newGames = gamesToBeUpdated(await toBeUpdated());
+async function playersToBeUpdated(games) {
+  var players = {};
+
+  //add players from each game to players object
+  games.forEach((game) => {
+    //add home team players to players object
+    sortPlayers(
+      players,
+      game.hTeam.stats,
+      game.vTeam.stats,
+      game.gameId,
+      game.startDateEastern,
+      true
+    );
+
+    //add visiting team players to players object
+    sortPlayers(
+      players,
+      game.vTeam.stats,
+      game.hTeam.stats,
+      game.gameId,
+      game.startDateEastern,
+      game.isNeutralVenue
+    );
+  });
+
+  return players;
 }
 
-//function to update teams roster
+function sortPlayers(players, team, opponent, gameId, gameDate, isHomeTeam) {
+  var matchupStats = {};
 
-async function playersToBeUpdated(results) {
-  //need to track missed games
-  //need to track matchups for each game
+  team.player.forEach((player) => {
+    player.matchup == null
+      ? (matchupStats = null)
+      : (matchupStats = calculations.matchupStats(
+          opponent.player,
+          player.matchup
+        ));
 
-  results.forEach((result) => {
-    var weightedMatchupStats = {};
-
-    result.hTeam.stats.player.forEach((player) => {
-      weightedMatchupStats = calculations.matchupStats(
-        result.vTeam.stats.player,
-        player.matchups
-      );
-
-      if (players.hasOwnProperty(player.playerId)) {
-        players[player.playerId].newGames.push({
-          gameId: result.gameId,
-          matchups: player.matchups,
-          isHomeGame: true,
-          playerStats: {
-            pts: player[i].pts,
-            ast: player[i].ast,
-            drb: player[i].drb,
-            orb: player[i].orb,
-            stl: player[i].stl,
-            blk: player[i].blk,
-            tov: player[i].tov,
-            fgm: player[i].fgm,
-            fga: player[i].fga,
-            tpm: player[i].tpm,
-            tpa: player[i].tpa,
-            ftm: player[i].ftm,
-            fta: player[i].fta,
-            mp: player[i].mp,
-            pf: player[i].pf,
+    if (players.hasOwnProperty(player.playerId)) {
+      if (player.dnp == "") {
+        players[player.playerId].playedGames.push({
+          gameId: gameId,
+          isHomeGame: isHomeTeam,
+          stats: {
+            player: {
+              pts: player.pts,
+              ast: player.ast,
+              drb: player.drb,
+              orb: player.orb,
+              stl: player.stl,
+              blk: player.blk,
+              tov: player.tov,
+              fgm: player.fgm,
+              fga: player.fga,
+              tpm: player.tpm,
+              tpa: player.tpa,
+              ftm: player.ftm,
+              fta: player.fta,
+              mp: player.mp,
+              pf: player.pf,
+              fp: player.fp,
+            },
+            matchup: matchupStats,
+            team: team.team,
+            opponent: opponent.team,
           },
-          matchupStats: weightedMatchupStats,
-          teamStats: result.hTeam.stats.team,
-          oppStats: result.vTeam.stats.team,
         });
       } else {
+        players[player.playerId].missedGames.push({
+          gameId: gameId,
+          gameDate: gameDate,
+          isHomeGame: isHomeTeam,
+          reason: player.dnp,
+        });
+      }
+    } else {
+      if (player.dnp == "") {
         players[player.playerId] = {
           playerId: player.playerId,
-          newGames: [
+          missedGames: [],
+          playedGames: [
             {
-              gameId: result.gameId,
-              matchups: player.matchups,
-              isHomeGame: true,
-              playerStats: {
-                pts: player[i].pts,
-                ast: player[i].ast,
-                drb: player[i].drb,
-                orb: player[i].orb,
-                stl: player[i].stl,
-                blk: player[i].blk,
-                tov: player[i].tov,
-                fgm: player[i].fgm,
-                fga: player[i].fga,
-                tpm: player[i].tpm,
-                tpa: player[i].tpa,
-                ftm: player[i].ftm,
-                fta: player[i].fta,
-                mp: player[i].mp,
-                pf: player[i].pf,
+              gameId: gameId,
+              gameDate: gameDate,
+              isHomeGame: isHomeTeam,
+              stats: {
+                player: {
+                  pts: player.pts,
+                  ast: player.ast,
+                  drb: player.drb,
+                  orb: player.orb,
+                  stl: player.stl,
+                  blk: player.blk,
+                  tov: player.tov,
+                  fgm: player.fgm,
+                  fga: player.fga,
+                  tpm: player.tpm,
+                  tpa: player.tpa,
+                  ftm: player.ftm,
+                  fta: player.fta,
+                  mp: player.mp,
+                  pf: player.pf,
+                  fp: player.fp,
+                },
+                matchup: matchupStats,
+                team: team.team,
+                opponent: opponent.team,
               },
-              matchupStats: weightedMatchupStats,
-              teamStats: result.hTeam.stats.team,
-              oppStats: result.vTeam.stats.team,
             },
           ],
         };
-      }
-    });
-    result.vTeam.stats.player.forEach((player) => {
-      weightedMatchupStats = calculations.matchupStats(
-        result.hTeam.stats.player,
-        player.matchups
-      );
-
-      if (players.hasOwnProperty(player.playerId)) {
-        players[player.playerId].newGames.push({
-          gameId: result.gameId,
-          matchups: player.matchups,
-          isHomeGame: false,
-          playerStats: {
-            pts: player[i].pts,
-            ast: player[i].ast,
-            drb: player[i].drb,
-            orb: player[i].orb,
-            stl: player[i].stl,
-            blk: player[i].blk,
-            tov: player[i].tov,
-            fgm: player[i].fgm,
-            fga: player[i].fga,
-            tpm: player[i].tpm,
-            tpa: player[i].tpa,
-            ftm: player[i].ftm,
-            fta: player[i].fta,
-            mp: player[i].mp,
-            pf: player[i].pf,
-          },
-          matchupStats: weightedMatchupStats,
-          teamStats: result.vTeam.stats.team,
-          oppStats: result.hTeam.stats.team,
-        });
       } else {
         players[player.playerId] = {
           playerId: player.playerId,
-          newGames: [
+          missedGames: [
             {
-              gameId: result.gameId,
-              matchups: player.matchups,
-              isHomeGame: false,
-              playerStats: {
-                pts: player[i].pts,
-                ast: player[i].ast,
-                drb: player[i].drb,
-                orb: player[i].orb,
-                stl: player[i].stl,
-                blk: player[i].blk,
-                tov: player[i].tov,
-                fgm: player[i].fgm,
-                fga: player[i].fga,
-                tpm: player[i].tpm,
-                tpa: player[i].tpa,
-                ftm: player[i].ftm,
-                fta: player[i].fta,
-                mp: player[i].mp,
-                pf: player[i].pf,
-              },
-              matchupStats: weightedMatchupStats,
-              teamStats: result.vTeam.stats.team,
-              oppStats: result.hTeam.stats.team,
+              gameId: gameId,
+              gameDate: gameDate,
+              isHomeGame: isHomeTeam,
+              reason: player.dnp,
             },
           ],
+          playedGames: [],
         };
       }
-    });
+    }
   });
-  return players;
+  return;
 }
 
 function gamesToBeUpdated(results) {
@@ -193,30 +213,13 @@ function gamesToBeUpdated(results) {
     };
     games.push(game);
   });
+
   return games;
 }
 
-async function main() {
-  const client = await mongoClient();
-
-  try {
-    await client.connect();
-    await addGames(client, await requests.getSchedule());
-    // await updatePlayers(await playersWithBirthdays());
-    // await addPlayers(client, await requests.getPlayers());
-    await updateGames(
-      client,
-      await requests.getUpdatedSchedule(await gamesToBeUpdated())
-    );
-    // await addTeams(client, await requests.getTeams());
-  } catch (error) {
-    console.error(error);
-  } finally {
-    await client.close();
-  }
+async function updateData() {
+  var newGames = gamesToBeUpdated(await toBeUpdated());
 }
-
-main().catch(console.error);
 
 async function addGames(client, games) {
   var cleanedGames = [];
@@ -328,8 +331,8 @@ async function updatePlayers(playersWithBirthday, playersWithNewGame) {
       .collection("players")
       .updateMany({ _id: { $in: playersWithBirthday } }, { $inc: { age: 1 } });
 
-    for (const playerId in playersWithNewGame) {
-      await updatePlayer(playersWithNewGame[playerId]);
+    for (var playerId in playersWithNewGame) {
+      await updatePlayer(client, playersWithNewGame[playerId]);
     }
   } catch (error) {
     console.error(error);
@@ -338,130 +341,98 @@ async function updatePlayers(playersWithBirthday, playersWithNewGame) {
   }
 }
 
-// finish update player function (queue of games)
-
-async function updatePlayer(player) {
-  /*
-  recent = {
-    games: [
-      gameId: "",
-      matchupIds: ["","","",""],
-      playerStats{
-        ppg: 0,
-        rpg: 0,
-        apg: 0,
-        spg: 0,
-        bpg: 0,
-        tpg: 0,
-        mpg: 0,
-        tpp: 0,
-        ftp: 0,
-        fgp: 0,
-        pts: 0,
-        ast: 0,
-        blk: 0,
-        tov: 0,
-        orb: 0,
-        drb: 0,
-        reb: 0,
-        fgm: 0,
-        fga: 0,
-        tpm: 0,
-        tpa: 0,
-        ftm: 0,
-        fta: 0,
-        pf: 0,
-        gp: 0,
-        gs: 0,
-        pm: 0,
-        min: 0,
-        dd2: 0,
-        td3: 0,
-      }
-      matchupStats: {
-
-      }
-      oppStats: {
-
-      }
-      teamStats: {
-
-      }
-    ],
-    last3: {
-      ppg: 0,
-      rpg: 0,
-      apg: 0,
-      spg: 0,
-      bpg: 0,
-      tpg: 0,
-      mpg: 0,
-      tpp: 0,
-      ftp: 0,
-      fgp: 0,
-      pts: 0,
-      ast: 0,
-      blk: 0,
-      tov: 0,
-      orb: 0,
-      drb: 0,
-      reb: 0,
-      fgm: 0,
-      fga: 0,
-      tpm: 0,
-      tpa: 0,
-      ftm: 0,
-      fta: 0,
-      pf: 0,
-      gp: 0,
-      gs: 0,
-      pm: 0,
-      min: 0,
-      dd2: 0,
-      td3: 0,
-    },
-    last5: {},
-    last7: {},
-    last10: {},
-  }
-  */
-
+async function updatePlayer(client, player) {
+  const maxGames = 10;
   const query = { _id: player.playerId };
-  var recentGames = [];
+  var seasonAverages = {};
+  var recentPlayedGames = [];
+  var recentMissedGames = [];
   var newRecent = {};
+
+  // add function that updates player seasonal stats season averages should only update season[0] once 10 games has been played by the player, otherwise reference previous season averages
 
   const result = await client
     .db("nbaFantasyLineup")
     .collection("players")
-    .findOne({ _id: query });
+    .findOne(query);
 
-  recentGames = result.stats.recent.games;
-  recentGames.splice(
-    recentGames.length - player.newGames.length,
-    player.newGames.length
-  );
-  recentGames.push(newGames);
+  if (result != null) {
+    seasonAverages = result.stats.season[0];
+    recentPlayedGames = result.stats.recent.playedGames;
+    recentMissedGames = result.stats.recent.missedGames;
 
-  // Calculate averages and advanced stats at this point.  Update database
+    //matchupSeasonAverages
 
-  lastNStats = calculations.lastNStats(recentGames);
+    recentPlayedGames = misc.updateQueue(
+      recentPlayedGames,
+      player.playedGames,
+      maxGames
+    );
+    recentMissedGames = misc.updateQueue(
+      recentMissedGames,
+      player.missedGames,
+      maxGames
+    );
 
-  newRecent = {
-    games: recentGames,
-    last3: last3Stats,
-    last5: last3Stats,
-    last7: last3Stats,
-    last10: last3Stats,
-  };
+    //change "type" to enumeration
+    newRecent = {
+      playedGames: recentPlayedGames,
+      missedGames: recentMissedGames,
+      differential: {
+        last3: calculations.lastNDifferential(
+          recentPlayedGames,
+          seasonAverages,
+          3
+        ),
+        last5: calculations.lastNDifferential(
+          recentPlayedGames,
+          seasonAverages,
+          5
+        ),
+        last7: calculations.lastNDifferential(
+          recentPlayedGames,
+          seasonAverages,
+          7
+        ),
+        last10: calculations.lastNDifferential(
+          recentPlayedGames,
+          seasonAverages,
+          10
+        ),
+      },
+      advanced: {
+        last3: calculations.advancedPlayerStats(
+          calculations.lastNAverages(recentPlayedGames, "player", 3),
+          calculations.lastNAverages(recentPlayedGames, "team", 3),
+          calculations.lastNAverages(recentPlayedGames, "opponent", 3)
+        ),
+        last5: calculations.advancedPlayerStats(
+          calculations.lastNAverages(recentPlayedGames, "player", 5),
+          calculations.lastNAverages(recentPlayedGames, "team", 5),
+          calculations.lastNAverages(recentPlayedGames, "opponent", 5)
+        ),
+        last7: calculations.advancedPlayerStats(
+          calculations.lastNAverages(recentPlayedGames, "player", 7),
+          calculations.lastNAverages(recentPlayedGames, "team", 7),
+          calculations.lastNAverages(recentPlayedGames, "opponent", 7)
+        ),
+        last10: calculations.advancedPlayerStats(
+          calculations.lastNAverages(recentPlayedGames, "player", 10),
+          calculations.lastNAverages(recentPlayedGames, "team", 10),
+          calculations.lastNAverages(recentPlayedGames, "opponent", 10)
+        ),
+      },
+    };
 
-  const update = {
-    $set: { gameStatus: game.gameStatus, hTeam: game.hTeam, vTeam: game.vTeam },
-  };
+    const update = {
+      $set: { "stats.recent": newRecent },
+    };
 
-  await client
-    .db("nbaFantasyLineup")
-    .collection("schedule")
-    .updateOne(query, update);
+    await client
+      .db("nbaFantasyLineup")
+      .collection("players")
+      .updateOne(query, update);
+  }
 }
 
 async function createPlayers(client, newPlayers) {

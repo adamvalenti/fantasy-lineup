@@ -37,9 +37,16 @@ function minutesPlayed(minsPlayed) {
   return minsPlayed;
 }
 
-function advancedPlayerStats(player, team, opponent, league) {
+function advancedPlayerStats(player, team, opponent) {
   var advancedStats = {
-    fp: playerFantasyPoints(player),
+    fp: playerFantasyPoints(
+      player.pts,
+      player.ast,
+      player.orb + player.drb,
+      player.stl,
+      player.blk,
+      player.tov
+    ),
     ortg: playerOffRtg(player, team, opponent),
     drtg: playerDefRtg(player, team, opponent),
     // per: playerEffRtg(player, team, league),
@@ -53,7 +60,7 @@ function teamPos(team, opponent) {
   return (
     team.fga +
     0.4 * team.fta -
-    1.07 * (team.orb / (team.orb + opponent.orb)) * (team.fga - team.fgm) +
+    1.07 * (team.orb / (team.orb + opponent.drb)) * (team.fga - team.fgm) +
     team.tov
   );
 }
@@ -68,7 +75,7 @@ function teamPace(team, opponent) {
   return pace;
 }
 
-function playerFantasyPoints(player) {
+function playerFantasyPoints(pts, ast, reb, stl, blk, tov) {
   const sliders = {
     pts: 1,
     ast: 1.5,
@@ -79,12 +86,12 @@ function playerFantasyPoints(player) {
   };
 
   var fantasyPoints =
-    player.pts * sliders.pts +
-    player.ast * sliders.ast +
-    (player.orb + player.drb) * sliders.reb +
-    player.stl * sliders.stl +
-    player.blk * sliders.blk +
-    player.tov * sliders.tov;
+    pts * sliders.pts +
+    ast * sliders.ast +
+    reb * sliders.reb +
+    stl * sliders.stl +
+    blk * sliders.blk +
+    tov * sliders.tov;
 
   return fantasyPoints;
 }
@@ -162,6 +169,64 @@ function playerOffRtg(player, team, opponent) {
   var playerORtg = 100 * (ptsProd / totPoss);
 
   return playerORtg;
+}
+
+function test() {
+  var player = {
+    stats: {
+      pts: 10,
+      stl: 2,
+      blk: 3,
+      drb: 4,
+      mp: 20,
+      pf: 4,
+    },
+  };
+  var opponent = {
+    stats: {
+      pts: 131,
+      ast: 36,
+      drb: 44,
+      orb: 13,
+      stl: 13,
+      blk: 11,
+      tov: 9,
+      fgm: 51,
+      fga: 109,
+      tpm: 16,
+      tpa: 37,
+      ftm: 13,
+      fta: 18,
+      mp: 240,
+      pf: 24,
+      tf: 24,
+      pos: 109,
+      pace: 109,
+    },
+  };
+  var team = {
+    stats: {
+      pts: 129,
+      ast: 36,
+      drb: 44,
+      orb: 13,
+      stl: 13,
+      blk: 11,
+      tov: 9,
+      fgm: 51,
+      fga: 115,
+      tpm: 16,
+      tpa: 37,
+      ftm: 13,
+      fta: 18,
+      mp: 240,
+      pf: 24,
+      tf: 24,
+      pos: 109,
+      pace: 109,
+    },
+  };
+  console.log(playerDefRtg(player.stats, team.stats, opponent.stats));
 }
 
 function playerDefRtg(player, team, opponent) {
@@ -278,61 +343,160 @@ function playerUsage(player, team) {
   return usage;
 }
 
-function lastNStats(stats) {
-  var processedStats = {
-    last3: {},
-    last5: {},
-    last7: {},
-    last10: {},
-  };
+function lastNStatAverage(recentGames, type, n, stat) {
+  var sum = 0;
+  var lastNGames = recentGames;
+  var num = n > lastNGames.length ? lastNGames.length : n;
+
+  for (let i = 0; i < num; i++) {
+    sum += lastNGames[i].stats[type][stat];
+  }
+  return sum / num;
 }
 
-function matchupStats(opponents, matchups) {
-  // right not matchup percentage wont add to 1, need to scale accordingly (assume 1 for now)
-
-  var weightedStats = {
-    pts: 0,
-    ast: 0,
-    drb: 0,
-    orb: 0,
-    stl: 0,
-    blk: 0,
-    tov: 0,
-    fgm: 0,
-    fga: 0,
-    tpm: 0,
-    tpa: 0,
-    ftm: 0,
-    fta: 0,
-    mp: 0,
-    pf: 0,
+function lastNAverages(recentGames, type, n) {
+  var lastNAverages = {
+    pts: lastNStatAverage(recentGames, type, n, "pts"),
+    ast: lastNStatAverage(recentGames, type, n, "ast"),
+    drb: lastNStatAverage(recentGames, type, n, "drb"),
+    orb: lastNStatAverage(recentGames, type, n, "orb"),
+    stl: lastNStatAverage(recentGames, type, n, "stl"),
+    blk: lastNStatAverage(recentGames, type, n, "blk"),
+    tov: lastNStatAverage(recentGames, type, n, "tov"),
+    fgm: lastNStatAverage(recentGames, type, n, "fgm"),
+    fga: lastNStatAverage(recentGames, type, n, "fga"),
+    tpm: lastNStatAverage(recentGames, type, n, "tpm"),
+    tpa: lastNStatAverage(recentGames, type, n, "tpa"),
+    ftm: lastNStatAverage(recentGames, type, n, "ftm"),
+    fta: lastNStatAverage(recentGames, type, n, "fta"),
+    mp: lastNStatAverage(recentGames, type, n, "mp"),
+    pf: lastNStatAverage(recentGames, type, n, "pf"),
+    pos:
+      type == "team" || type == "opponent"
+        ? lastNStatAverage(recentGames, type, n, "pos")
+        : null,
+    pace:
+      type == "team" || type == "opponent"
+        ? lastNStatAverage(recentGames, type, n, "pace")
+        : null,
   };
-  var matchup = {};
 
-  for (let i = 0; i < matchups.length; i++) {
-    matchup = opponents.filter((player) => {
-      return player.playerId === matchups.playerId;
-    });
-    weightedStats = {
-      pts: weightedStats.pts + matchup.playerStats.pts,
-      ast: weightedStats.ast + matchup.playerStats.ast,
-      drb: weightedStats.drb + matchup.playerStats.drb,
-      orb: weightedStats.orb + matchup.playerStats.orb,
-      stl: weightedStats.stl + matchup.playerStats.stl,
-      blk: weightedStats.blk + matchup.playerStats.blk,
-      tov: weightedStats.tov + matchup.playerStats.tov,
-      fgm: weightedStats.fgm + matchup.playerStats.fgm,
-      fga: weightedStats.fga + matchup.playerStats.fga,
-      tpm: weightedStats.tpm + matchup.playerStats.tpm,
-      tpa: weightedStats.tpa + matchup.playerStats.tpa,
-      ftm: weightedStats.ftm + matchup.playerStats.ftm,
-      fta: weightedStats.fta + matchup.playerStats.fta,
-      mp: weightedStats.mp + matchup.playerStats.mp,
-      pf: weightedStats.pf + matchup.playerStats.pf,
-    };
+  return lastNAverages;
+}
+
+function lastNDifferential(recentGames, seasonAverages, n) {
+  var lastNDifferential = {
+    pts: lastNStatAverage(recentGames, "player", n, "pts") - seasonAverages.ppg,
+    ast: lastNStatAverage(recentGames, "player", n, "ast") - seasonAverages.apg,
+    drb:
+      lastNStatAverage(recentGames, "player", n, "drb") -
+      seasonAverages.drb / seasonAverages.gp,
+    orb:
+      lastNStatAverage(recentGames, "player", n, "orb") -
+      seasonAverages.orb / seasonAverages.gp,
+    stl: lastNStatAverage(recentGames, "player", n, "stl") - seasonAverages.spg,
+    blk: lastNStatAverage(recentGames, "player", n, "blk") - seasonAverages.bpg,
+    tov:
+      lastNStatAverage(recentGames, "player", n, "tov") - seasonAverages.topg,
+    fgm:
+      lastNStatAverage(recentGames, "player", n, "fgm") -
+      seasonAverages.fgm / seasonAverages.gp,
+    fga:
+      lastNStatAverage(recentGames, "player", n, "fga") -
+      seasonAverages.fga / seasonAverages.gp,
+    tpm:
+      lastNStatAverage(recentGames, "player", n, "tpm") -
+      seasonAverages.tpm / seasonAverages.gp,
+    tpa:
+      lastNStatAverage(recentGames, "player", n, "tpa") -
+      seasonAverages.tpa / seasonAverages.gp,
+    ftm:
+      lastNStatAverage(recentGames, "player", n, "ftm") -
+      seasonAverages.ftm / seasonAverages.gp,
+    fta:
+      lastNStatAverage(recentGames, "player", n, "fta") -
+      seasonAverages.fta / seasonAverages.gp,
+    mp: lastNStatAverage(recentGames, "player", n, "mp") - seasonAverages.mpg,
+    pf:
+      lastNStatAverage(recentGames, "player", n, "pf") -
+      seasonAverages.pf / seasonAverages.gp,
+    fp: lastNStatAverage(recentGames, "player", n, "fp") - seasonAverages.fppg,
+  };
+  return lastNDifferential;
+}
+
+function positions(players, hId) {
+  var sortedPositions = {
+    hTeam: {
+      PG: [],
+      SG: [],
+      SF: [],
+      PF: [],
+      C: [],
+    },
+    vTeam: {
+      PG: [],
+      SG: [],
+      SF: [],
+      PF: [],
+      C: [],
+    },
+  };
+
+  for (let i = 0; i < players.length; i++) {
+    var minsPlayed = minutesPlayed(players[i].min);
+
+    if (
+      players[i].teamId == hId &&
+      players[i].dnp == "" &&
+      players[i].pos != ""
+    ) {
+      sortedPositions.hTeam[players[i].pos] = {
+        playerId: players[i].personId,
+        mins: minsPlayed,
+        idx: i,
+      };
+    } else if (players[i].dnp == "" && players[i].pos != "") {
+      sortedPositions.vTeam[players[i].pos] = {
+        playerId: players[i].personId,
+        mins: minsPlayed,
+        idx: i,
+      };
+    }
   }
 
-  return weightedStats;
+  return sortedPositions;
+}
+
+function matchupStats(opponents, matchup) {
+  // only one matchup may need to figure out how to include others
+
+  var stats = {};
+
+  var individualMatchup = opponents.filter((player) => {
+    return player.playerId === matchup.playerId;
+  });
+
+  stats = {
+    pts: individualMatchup[0].pts,
+    ast: individualMatchup[0].ast,
+    drb: individualMatchup[0].drb,
+    orb: individualMatchup[0].orb,
+    stl: individualMatchup[0].stl,
+    blk: individualMatchup[0].blk,
+    tov: individualMatchup[0].tov,
+    fgm: individualMatchup[0].fgm,
+    fga: individualMatchup[0].fga,
+    tpm: individualMatchup[0].tpm,
+    tpa: individualMatchup[0].tpa,
+    ftm: individualMatchup[0].ftm,
+    fta: individualMatchup[0].fta,
+    mp: individualMatchup[0].mp,
+    pf: individualMatchup[0].pf,
+    fp: individualMatchup[0].fp,
+  };
+
+  return stats;
 }
 
 module.exports.advancedPlayerStats = advancedPlayerStats;
@@ -340,4 +504,8 @@ module.exports.minutesPlayed = minutesPlayed;
 module.exports.leagueConstants = leagueConstants;
 module.exports.numOfTeamPos = numOfTeamPos;
 module.exports.teamPace = teamPace;
-module.exports.lastNStats = lastNStats;
+module.exports.lastNDifferential = lastNDifferential;
+module.exports.playerFantasyPoints = playerFantasyPoints;
+module.exports.positions = positions;
+module.exports.matchupStats = matchupStats;
+module.exports.lastNAverages = lastNAverages;

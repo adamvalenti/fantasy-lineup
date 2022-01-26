@@ -56,6 +56,22 @@ async function getGameStats(url) {
       player: [],
     },
   };
+  var positions = {
+    hTeam: {
+      PG: [],
+      SG: [],
+      SF: [],
+      PF: [],
+      C: [],
+    },
+    vTeam: {
+      PG: [],
+      SG: [],
+      SF: [],
+      PF: [],
+      C: [],
+    },
+  };
 
   await axios
     .get(url)
@@ -66,20 +82,6 @@ async function getGameStats(url) {
       }
       var teamMinsPlayed = calculations.minutesPlayed(results.hTeam.totals.min);
       var hId = res.data.basicGameData.hTeam.teamId;
-      var hTeamPositions = {
-        PG: [],
-        SG: [],
-        SF: [],
-        PF: [],
-        C: [],
-      };
-      var vTeamPositions = {
-        PG: [],
-        SG: [],
-        SF: [],
-        PF: [],
-        C: [],
-      };
 
       misc.assignTeamStats(
         gameStats.vTeam.team,
@@ -92,25 +94,8 @@ async function getGameStats(url) {
         teamMinsPlayed
       );
 
-      for (let i = 0; i < results.activePlayers.length; i++) {
-        var minsPlayed = calculations.minutesPlayed(
-          results.activePlayers[i].min
-        );
-
-        // Right now not accurate because some players can play at the same time.
-
-        if (results.activePlayers[i].teamId == hId && minsPlayed > 0) {
-          hTeamPositions[results.activePlayers[i].pos].push({
-            playerId: results.activePlayers[i].personId,
-            matchupPercentage: (minsPlayed / teamMinsPlayed) * 5,
-          });
-        } else if (minsPlayed > 0) {
-          vTeamPositions[results.activePlayers[i].pos].push({
-            playerId: results.activePlayers[i].personId,
-            matchupPercentage: (minsPlayed / teamMinsPlayed) * 5,
-          });
-        }
-      }
+      positions = calculations.positions(results.activePlayers, hId);
+      //add matchup season stats to determine if they had a better or worse game than normal maybe add later
 
       for (let i = 0; i < results.activePlayers.length; i++) {
         var minsPlayed = calculations.minutesPlayed(
@@ -119,18 +104,42 @@ async function getGameStats(url) {
         var playerStats = {};
 
         if (results.activePlayers[i].teamId == hId) {
-          playerStats = misc.assignPlayerStats(
-            results.activePlayers[i],
-            minsPlayed,
-            vTeamPositions[results.activePlayers[i].pos]
-          );
+          if (positions.vTeam[results.activePlayers[i].pos] != undefined) {
+            playerStats = misc.assignPlayerStats(
+              results.activePlayers[i],
+              minsPlayed,
+              results.activePlayers[
+                positions.vTeam[results.activePlayers[i].pos].idx
+              ],
+              positions.vTeam[results.activePlayers[i].pos].mins
+            );
+          } else {
+            playerStats = misc.assignPlayerStats(
+              results.activePlayers[i],
+              minsPlayed,
+              null,
+              null
+            );
+          }
           gameStats.hTeam.player.push(playerStats);
         } else {
-          playerStats = misc.assignPlayerStats(
-            results.activePlayers[i],
-            minsPlayed,
-            hTeamPositions[results.activePlayers[i].pos]
-          );
+          if (positions.hTeam[results.activePlayers[i].pos] != undefined) {
+            playerStats = misc.assignPlayerStats(
+              results.activePlayers[i],
+              minsPlayed,
+              results.activePlayers[
+                positions.hTeam[results.activePlayers[i].pos].idx
+              ],
+              positions.hTeam[results.activePlayers[i].pos].mins
+            );
+          } else {
+            playerStats = misc.assignPlayerStats(
+              results.activePlayers[i],
+              minsPlayed,
+              null,
+              null
+            );
+          }
           gameStats.vTeam.player.push(playerStats);
         }
       }
@@ -188,15 +197,17 @@ async function getUpdatedSchedule(newGames) {
         cleanedGames[i].hTeam.stats.team,
         cleanedGames[i].vTeam.stats.team
       );
-      cleanedGames[i].hTeam.stats.team.pace = calculations.teamPace(
-        cleanedGames[i].hTeam.stats.team,
-        cleanedGames[i].vTeam.stats.team
-      );
 
       cleanedGames[i].vTeam.stats.team.pos = calculations.numOfTeamPos(
         cleanedGames[i].vTeam.stats.team,
         cleanedGames[i].hTeam.stats.team
       );
+
+      cleanedGames[i].hTeam.stats.team.pace = calculations.teamPace(
+        cleanedGames[i].hTeam.stats.team,
+        cleanedGames[i].vTeam.stats.team
+      );
+
       cleanedGames[i].vTeam.stats.team.pace = calculations.teamPace(
         cleanedGames[i].vTeam.stats.team,
         cleanedGames[i].hTeam.stats.team
@@ -255,7 +266,7 @@ async function getPlayers() {
       players = res.data.league.standard;
       for (let i = 0; i < players.length; i++) {
         players[i].stats = {
-          regularSeason: await getSeasonalStats(
+          season: await getSeasonalStats(
             getPlayerStatsUrl(seasonYear, players[i].personId)
           ),
         };
@@ -268,12 +279,24 @@ async function getPlayers() {
   return players;
 }
 
+// getSeasonalStats(getPlayerStatsUrl("2021", "202699")).catch(console.error);
+
 async function getSeasonalStats(url) {
   var seasonalStats = {};
   await axios
     .get(url)
     .then((res) => {
-      seasonalStats = res.data.league.standard.stats.regularSeason;
+      seasonalStats = res.data.league.standard.stats.regularSeason.season;
+      for (let i = 0; i < seasonalStats.length; i++) {
+        seasonalStats[i].total.fppg = calculations.playerFantasyPoints(
+          seasonalStats[i].total.ppg,
+          seasonalStats[i].total.apg,
+          seasonalStats[i].total.rpg,
+          seasonalStats[i].total.spg,
+          seasonalStats[i].total.bpg,
+          seasonalStats[i].total.topg
+        );
+      }
     })
     .catch((err) => {
       console.error(err);
