@@ -1,6 +1,5 @@
 const axios = require("axios");
 const calculations = require("./calculations.js");
-const mongo = require("./mongo.js");
 const misc = require("./misc.js");
 
 const gameStatus = {
@@ -25,6 +24,10 @@ async function getSeasonYear() {
   return seasonYear;
 }
 
+function getScheduleUrl(seasonYear) {
+  return "http://data.nba.net/10s/prod/v1/" + seasonYear + "/schedule.json";
+}
+
 function getGameUrl(gameDate, gameId) {
   return (
     "https://data.nba.net/prod/v1/" + gameDate + "/" + gameId + "_boxscore.json"
@@ -43,6 +46,20 @@ function getPlayerStatsUrl(seasonYear, playerId) {
 
 function getPlayersUrl(seasonYear) {
   return "https://data.nba.net/10s/prod/v1/" + seasonYear + "/players.json";
+}
+
+function getTeamsUrl(seasonYear) {
+  return "http://data.nba.net/10s/prod/v2/" + seasonYear + "/teams.json";
+}
+
+function getTeamRosterUrl(seasonYear, teamUrlName) {
+  return (
+    "http://data.nba.net/10s/prod/v1/" +
+    seasonYear +
+    "/teams/" +
+    teamUrlName +
+    "/roster.json"
+  );
 }
 
 async function getGameStats(url) {
@@ -152,8 +169,8 @@ async function getGameStats(url) {
 }
 
 async function getSchedule() {
-  const url = "http://data.nba.net/10s/prod/v1/2021/schedule.json";
-
+  var seasonYear = await getSeasonYear();
+  var url = getScheduleUrl(seasonYear);
   var games = [];
 
   await axios
@@ -212,48 +229,95 @@ async function getUpdatedSchedule(newGames) {
         cleanedGames[i].vTeam.stats.team,
         cleanedGames[i].hTeam.stats.team
       );
-
-      // for (let j = 0; j < cleanedGames[i].hTeam.stats.player.length; j++) {
-      //   if (cleanedGames[i].hTeam.stats.player[j].mp != 0) {
-      //     cleanedGames[i].hTeam.stats.player[j].advanced =
-      //       calculations.advancedPlayerStats(
-      //         cleanedGames[i].hTeam.stats.player[j],
-      //         cleanedGames[i].hTeam.stats.team,
-      //         cleanedGames[i].vTeam.stats.team,
-      //         league
-      //       );
-      //   }
-      // }
-      // for (let j = 0; j < cleanedGames[i].vTeam.stats.player.length; j++) {
-      //   if (cleanedGames[i].vTeam.stats.player[j].mp != 0) {
-      //     cleanedGames[i].vTeam.stats.player[j].advanced =
-      //       calculations.advancedPlayerStats(
-      //         cleanedGames[i].vTeam.stats.player[j],
-      //         cleanedGames[i].vTeam.stats.team,
-      //         cleanedGames[i].hTeam.stats.team,
-      //         league
-      //       );
-      //   }
-      // }
     }
   }
   return cleanedGames;
 }
 
 async function getTeams() {
-  const url = "http://data.nba.net/10s/prod/v2/2021/teams.json";
-
+  var seasonYear = await getSeasonYear();
+  var url = getTeamsUrl(seasonYear);
   var teams = [];
+  var oldRosters = {};
+
   await axios
     .get(url)
-    .then((res) => {
+    .then(async function (res) {
       teams = res.data.league.standard;
+      var team;
+      for (let i = 0; i < teams.length; i++) {
+        team = teams[i];
+        if (team.isNBAFranchise) {
+          team.activeRoster = await getTeamRoster(
+            getTeamRosterUrl(seasonYear, team.urlName)
+          );
+          for (let j = 0; j < team.activeRoster.length; j++) {
+            var player = team.activeRoster[j];
+            var seasonalStats = await getSeasonalStats(
+              getPlayerStatsUrl(seasonYear, player.personId)
+            );
+
+            player.seasonalStats = misc.parseSeasonalStats(seasonalStats);
+
+            if (
+              player.seasonalStats.length != 0 &&
+              player.seasonalStats[0].teams.length > 1
+            ) {
+              for (let k = 0; k < player.seasonalStats[0].teams.length; k++) {
+                var currTeam = player.seasonalStats[0].teams[k];
+                if (
+                  currTeam.teamId != seasonalStats.teamId &&
+                  currTeam.teamId != "0"
+                ) {
+                  var playerStats = {
+                    personId: player.personId,
+                    playerStats: currTeam,
+                  };
+
+                  if (oldRosters.hasOwnProperty(currTeam.teamId)) {
+                    oldRosters[currTeam.teamId].push(playerStats);
+                  } else {
+                    oldRosters[currTeam.teamId] = [playerStats];
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          teams.splice(i, 1);
+          i--;
+        }
+      }
+      for (let i = 0; i < teams.length; i++) {
+        team = teams[i];
+        if (team.isNBAFranchise) {
+          team.oldRoster =
+            oldRosters[team.teamId] === undefined
+              ? []
+              : oldRosters[team.teamId];
+        }
+      }
     })
     .catch((err) => {
       console.error(err);
       return err;
     });
   return teams;
+}
+
+async function getTeamRoster(url) {
+  var roster = [];
+
+  await axios
+    .get(url)
+    .then((res) => {
+      roster = res.data.league.standard.players;
+    })
+    .catch((err) => {
+      console.error(err);
+      return err;
+    });
+  return roster;
 }
 
 async function getPlayers() {
@@ -287,16 +351,6 @@ async function getSeasonalStats(url) {
     .get(url)
     .then((res) => {
       seasonalStats = res.data.league.standard.stats.regularSeason.season;
-      for (let i = 0; i < seasonalStats.length; i++) {
-        seasonalStats[i].total.fppg = calculations.playerFantasyPoints(
-          seasonalStats[i].total.ppg,
-          seasonalStats[i].total.apg,
-          seasonalStats[i].total.rpg,
-          seasonalStats[i].total.spg,
-          seasonalStats[i].total.bpg,
-          seasonalStats[i].total.topg
-        );
-      }
     })
     .catch((err) => {
       console.error(err);
@@ -309,3 +363,5 @@ module.exports.getTeams = getTeams;
 module.exports.getUpdatedSchedule = getUpdatedSchedule;
 module.exports.getSchedule = getSchedule;
 module.exports.getPlayers = getPlayers;
+module.exports.getSeasonYear = getSeasonYear;
+module.exports.gameStatus = gameStatus;
