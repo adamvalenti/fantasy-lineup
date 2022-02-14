@@ -21,14 +21,14 @@ function currentDate() {
   return currDate;
 }
 
-function currentTime() {
+function displayCurrentTime() {
   var currDate = new Date();
   var hours = currDate.getHours();
   var minutes = currDate.getMinutes();
   var seconds = currDate.getSeconds();
   var time = hours + ":" + minutes + ":" + seconds;
 
-  return time;
+  console.log(time);
 }
 
 function convertDate(dateString) {
@@ -86,7 +86,7 @@ function formatGame(game) {
     startDateEastern: convertDate(game.startDateEastern),
     isNeutralVenue: game.isNeutralVenue,
     startTimeEastern: game.startTimeEastern,
-    gameStatus: game.gameStatus,
+    updateStatus: game.updateStatus,
     hTeam: {
       teamId: game.hTeam.teamId,
       score: parseInt(game.hTeam.score),
@@ -119,15 +119,15 @@ function parseSeasonStats(seasonStats, isTeam) {
     drb: parseInt(seasonStats.defReb),
     stl: parseInt(seasonStats.steals),
     blk: parseInt(seasonStats.blocks),
-    tov: parseInt(seasonStats.defReb),
-    tpm: parseInt(seasonStats.assists),
-    tpa: parseInt(seasonStats.assists),
+    tov: parseInt(seasonStats.turnovers),
+    tpm: parseInt(seasonStats.tpm),
+    tpa: parseInt(seasonStats.tpa),
     tpp: parseFloat(seasonStats.tpp),
-    fgm: parseInt(seasonStats.assists),
-    fga: parseInt(seasonStats.assists),
+    fgm: parseInt(seasonStats.fgm),
+    fga: parseInt(seasonStats.fga),
     fgp: parseFloat(seasonStats.fgp),
-    ftm: parseInt(seasonStats.assists),
-    fta: parseInt(seasonStats.assists),
+    ftm: parseInt(seasonStats.ftm),
+    fta: parseInt(seasonStats.fta),
     ftp: parseFloat(seasonStats.ftp),
     mp: minutesPlayed,
     pf: parseFloat(seasonStats.pFouls),
@@ -272,6 +272,62 @@ function formatPlayer(player) {
   return cleanedPlayer;
 }
 
+function formatTeamUpdate(
+  teamId,
+  teamData,
+  gamesPlayed,
+  scoringUsageRankings,
+  playmakingUsageRankings,
+  reboundingUsageRankings
+) {
+  var updates = {};
+  var updateString;
+  var command;
+
+  for (let i = 0; i < teamData.length; i++) {
+    updateString = "activeRoster." + i + ".data";
+
+    updates[updateString] = {
+      usage: teamData[i].usage,
+      games: teamData[i].games,
+      averages: teamData[i].averages,
+      teamAverages: teamData[i].teamAverages,
+      gp: teamData[i].gp,
+      gm: teamData[i].gm,
+    };
+  }
+  updates.gp = gamesPlayed;
+  updates.scoringUsageRankings = scoringUsageRankings;
+  updates.playmakingUsageRankings = playmakingUsageRankings;
+  updates.reboundingUsageRankings = reboundingUsageRankings;
+
+  command = {
+    updateOne: {
+      filter: { _id: teamId },
+      update: { $set: updates },
+    },
+  };
+  return command;
+}
+
+function formatGameUpdate(game) {
+  var updates = {};
+  var command;
+
+  updates.updateStatus = game.updateStatus;
+  updates.hTeam = game.hTeam;
+  updates.vTeam = game.vTeam;
+
+  command = {
+    updateOne: {
+      filter: { _id: game._id },
+      update: { $set: updates },
+    },
+  };
+
+  return command;
+}
+
 function assignPlayerStats(player, minsPlayed, matchup, matchupMinsPlayed) {
   var playerStats = {
     playerId: player.personId,
@@ -390,7 +446,7 @@ function updateQueue(currQueue, newQueue, maxGames) {
 module.exports.playerAge = playerAge;
 module.exports.convertDate = convertDate;
 module.exports.currentDate = currentDate;
-module.exports.currentTime = currentTime;
+module.exports.displayCurrentTime = displayCurrentTime;
 module.exports.playedGame = playedGame;
 module.exports.sortStats = sortStats;
 module.exports.assignTeamStats = assignTeamStats;
@@ -399,3 +455,5 @@ module.exports.formatPlayer = formatPlayer;
 module.exports.assignPlayerStats = assignPlayerStats;
 module.exports.updateQueue = updateQueue;
 module.exports.parseSeasonalStats = parseSeasonalStats;
+module.exports.formatTeamUpdate = formatTeamUpdate;
+module.exports.formatGameUpdate = formatGameUpdate;

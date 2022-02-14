@@ -928,7 +928,7 @@ function leagueAverages(playerStats) {
   };
 }
 
-function teamAverages(games) {
+function newAverages(games) {
   var numOfGames;
 
   var totals = {
@@ -947,50 +947,50 @@ function teamAverages(games) {
     fta: 0,
     mp: 0,
     pf: 0,
-    fp: 0,
+    tf: 0,
+    pos: 0,
+    pace: 0,
   };
+  var averages = {};
 
   for (let i = 0; i < games.length; i++) {
     numOfGames = i;
-    totals = {
-      pts: games[i].pts + totals.pts,
-      ast: games[i].ast + totals.ast,
-      orb: games[i].orb + totals.orb,
-      drb: games[i].drb + totals.drb,
-      stl: games[i].stl + totals.stl,
-      blk: games[i].blk + totals.blk,
-      tov: games[i].tov + totals.tov,
-      tpm: games[i].tpm + totals.tpm,
-      tpa: games[i].tpa + totals.tpa,
-      fgm: games[i].fgm + totals.fgm,
-      fga: games[i].fga + totals.fga,
-      ftm: games[i].ftm + totals.ftm,
-      fta: games[i].fta + totals.fta,
-      mp: games[i].mp + totals.mp,
-      pf: games[i].pf + totals.pf,
-      fp: games[i].fp + totals.fp,
-    };
+    for (var stat in games[i]) {
+      totals[stat] += games[i][stat];
+    }
   }
-  var averages = {
-    pts: totals.pts / numOfGames,
-    ast: totals.ast / numOfGames,
-    orb: totals.orb / numOfGames,
-    drb: totals.drb / numOfGames,
-    stl: totals.stl / numOfGames,
-    blk: totals.blk / numOfGames,
-    tov: totals.tov / numOfGames,
-    tpm: totals.tpm / numOfGames,
-    tpa: totals.tpa / numOfGames,
-    fgm: totals.fgm / numOfGames,
-    fga: totals.fga / numOfGames,
-    ftm: totals.ftm / numOfGames,
-    fta: totals.fta / numOfGames,
-    mp: totals.mp / numOfGames,
-    pf: totals.pf / numOfGames,
-    fp: totals.fp / numOfGames,
-  };
+
+  for (var stat in totals) {
+    averages[stat] = totals[stat] / numOfGames;
+  }
 
   return averages;
+}
+
+function currAverages(
+  oldAverages,
+  newAverages,
+  oldGamesPlayed,
+  newGamesPlayed,
+  currGamesPlayed
+) {
+  var currAverages = {};
+  for (var stat in oldAverages) {
+    currAverages[stat] =
+      (oldAverages[stat] * oldGamesPlayed +
+        newAverages[stat] * newGamesPlayed) /
+      currGamesPlayed;
+  }
+
+  return currAverages;
+}
+
+function usageRankings(rankings, prop) {
+  rankings.sort((a, b) => {
+    return a[prop] < b[prop] ? 1 : a[prop] > b[prop] ? -1 : 0;
+  });
+
+  return rankings;
 }
 
 module.exports.advancedPlayerStats = advancedPlayerStats;
@@ -1009,5 +1009,7 @@ module.exports.playerAverages = playerAverages;
 module.exports.playerAdvanced = playerAdvanced;
 module.exports.newSeasonAverages = newSeasonAverages;
 module.exports.playerUsage = playerUsage;
-module.exports.teamAverages = teamAverages;
+module.exports.newAverages = newAverages;
+module.exports.currAverages = currAverages;
 module.exports.usagePercentages = usagePercentages;
+module.exports.usageRankings = usageRankings;

@@ -2,9 +2,9 @@ const axios = require("axios");
 const calculations = require("./calculations.js");
 const misc = require("./misc.js");
 
-const gameStatus = {
+const updateStatus = {
   COMPLETE: "complete",
-  MISSING: "missing",
+  NOTREADY: "not ready",
   PENDING: "pending",
 };
 
@@ -178,7 +178,7 @@ async function getSchedule() {
     .then((res) => {
       games = res.data.league.standard;
       for (let i = 0; i < games.length; i++) {
-        games[i].gameStatus = gameStatus.PENDING;
+        games[i].updateStatus = updateStatus.NOTREADY;
       }
     })
     .catch((err) => {
@@ -196,17 +196,15 @@ async function getUpdatedSchedule(newGames) {
   for (let i = 0; i < games.length; i++) {
     if (games[i].gameId == newGames[0].gameId) {
       cleanedGames = games.splice(i, newGames.length);
-      break;
+      i = games.length;
     }
   }
   for (let i = 0; i < cleanedGames.length; i++) {
     var gameStats = await getGameStats(
       getGameUrl(cleanedGames[i].startDateEastern, cleanedGames[i].gameId)
     );
-    if (gameStats == null) {
-      cleanedGames[i].gameStatus = gameStatus.MISSING;
-    } else {
-      cleanedGames[i].gameStatus = gameStatus.COMPLETE;
+    if (gameStats != null) {
+      cleanedGames[i].updateStatus = updateStatus.PENDING;
       cleanedGames[i].hTeam.stats = gameStats.hTeam;
       cleanedGames[i].vTeam.stats = gameStats.vTeam;
 
@@ -258,6 +256,18 @@ async function getTeams() {
             );
 
             player.seasonalStats = misc.parseSeasonalStats(seasonalStats);
+            player.data = {
+              usage: {
+                scoringUsage: 0,
+                playmakingUsage: 0,
+                reboundingUsage: 0,
+              },
+              games: [],
+              averages: {},
+              teamAverages: {},
+              gp: 0,
+              gm: 0,
+            };
 
             if (
               player.seasonalStats.length != 0 &&
@@ -364,4 +374,4 @@ module.exports.getUpdatedSchedule = getUpdatedSchedule;
 module.exports.getSchedule = getSchedule;
 module.exports.getPlayers = getPlayers;
 module.exports.getSeasonYear = getSeasonYear;
-module.exports.gameStatus = gameStatus;
+module.exports.updateStatus = updateStatus;
