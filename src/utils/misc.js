@@ -1,4 +1,24 @@
 const calculations = require("./calculations.js");
+const requests = require("./apiRequests.js");
+
+function daysOld(dateOfBirth) {
+  var year = dateOfBirth.substring(0, 4);
+  var month = dateOfBirth.substring(5, 7) - 1;
+  var day = dateOfBirth.substring(8, 10);
+
+  var currDate = currentDate();
+  var birthDate = new Date(year, month, day);
+
+  const diffDays = Math.round((currDate - birthDate) / (24 * 60 * 60 * 1000));
+
+  return diffDays;
+}
+
+function testDaysOld() {
+  var dateOfBirth = "2001-01-16";
+
+  console.log(daysOld(dateOfBirth));
+}
 
 function playerAge(dateString) {
   var year = dateString.substring(0, 4);
@@ -229,6 +249,72 @@ function parseSeasonalStats(seasonalStats) {
   return seasonsPlayed;
 }
 
+function formatModelPlayer(player) {
+  var cleanedPlayer = {};
+  var prevSeason = {};
+  var seasonsPlayed;
+
+  if (player.stats.season != undefined) {
+    seasonsPlayed = parseSeasonalStats(player.stats.season);
+  }
+
+  if (player.prevSeason != undefined && player.prevSeason.teams != undefined) {
+    var teamsPlayed = [];
+    for (let i = 0; i < player.prevSeason.teams.length; i++) {
+      var currTeam = player.prevSeason.teams[i];
+      var team = parseSeasonStats(currTeam, true);
+      teamsPlayed.push(team);
+      numOfTeams = i;
+    }
+    if (numOfTeams == 1) {
+      prevSeason = {
+        seasonYear: player.prevSeason.seasonYear,
+        teams: teamsPlayed,
+        perGame: teamsPlayed[0].perGame,
+        perMin: teamsPlayed[0].perMin,
+        totals: teamsPlayed[0].totals,
+      };
+    } else {
+      prevSeason = parseSeasonStats(player.prevSeason.total, false);
+      prevSeason.seasonYear = player.prevSeason.seasonYear;
+      prevSeason.teams = teamsPlayed;
+    }
+  }
+
+  cleanedPlayer = {
+    _id: player.personId,
+    name: player.firstName + " " + player.lastName,
+    teamId: player.teamId,
+    pos: player.pos,
+    dateOfBirthUTC: player.dateOfBirthUTC,
+    daysOld: daysOld(player.dateOfBirthUTC),
+    yearsPro: parseInt(player.yearsPro),
+    country: player.country,
+    prevSeason: prevSeason,
+    stats: {
+      season: seasonsPlayed,
+      recent: {
+        playedGames: [],
+        missedGames: [],
+        differential: {
+          last3: {},
+          last5: {},
+          last7: {},
+          last10: {},
+        },
+        advanced: {
+          last3: {},
+          last5: {},
+          last7: {},
+          last10: {},
+        },
+        deviation: {},
+      },
+    },
+  };
+  return cleanedPlayer;
+}
+
 function formatPlayer(player) {
   var cleanedPlayer = {};
   var seasonsPlayed = [];
@@ -236,6 +322,7 @@ function formatPlayer(player) {
   if (player.stats.season != undefined) {
     seasonsPlayed = parseSeasonalStats(player.stats.season);
   }
+
   cleanedPlayer = {
     _id: player.personId,
     name: player.firstName + " " + player.lastName,
@@ -246,10 +333,11 @@ function formatPlayer(player) {
     heightInches: parseInt(player.heightInches),
     weightPounds: parseInt(player.weightPounds),
     dateOfBirthUTC: player.dateOfBirthUTC,
+    daysOld: daysOld(player.dateOfBirthUTC),
     yearsPro: parseInt(player.yearsPro),
     country: player.country,
     stats: {
-      season: [],
+      season: seasonsPlayed,
       recent: {
         playedGames: [],
         missedGames: [],
@@ -275,28 +363,40 @@ function formatPlayer(player) {
 function formatTeamUpdate(
   teamId,
   teamData,
+  roster,
   gamesPlayed,
   scoringUsageRankings,
   playmakingUsageRankings,
-  reboundingUsageRankings
+  reboundingUsageRankings,
+  gamelog
 ) {
   var updates = {};
   var updateString;
   var command;
 
   for (let i = 0; i < teamData.length; i++) {
-    updateString = "activeRoster." + i + ".data";
+    updateString = "roster." + i;
 
     updates[updateString] = {
-      usage: teamData[i].usage,
-      games: teamData[i].games,
-      averages: teamData[i].averages,
-      teamAverages: teamData[i].teamAverages,
-      gp: teamData[i].gp,
-      gm: teamData[i].gm,
+      playerId: roster[i].playerId,
+      isActive: roster[i].isActive,
+      pos: roster[i].pos,
+      name: roster[i].name,
+      seasonalStats: roster[i].seasonalStats,
+      data: {
+        usage: teamData[i].usage,
+        games: teamData[i].games,
+        averages: teamData[i].averages,
+        teamAverages: teamData[i].teamAverages,
+        matchupGames: teamData[i].matchupGames,
+        matchupAverages: teamData[i].matchupAverages,
+        gp: teamData[i].gp,
+        gm: teamData[i].gm,
+      },
     };
   }
   updates.gp = gamesPlayed;
+  updates.gamelog = gamelog;
   updates.scoringUsageRankings = scoringUsageRankings;
   updates.playmakingUsageRankings = playmakingUsageRankings;
   updates.reboundingUsageRankings = reboundingUsageRankings;
@@ -328,74 +428,51 @@ function formatGameUpdate(game) {
   return command;
 }
 
-function assignPlayerStats(player, minsPlayed, matchup, matchupMinsPlayed) {
+function formatScheduleUpdate() {
+  return [
+    {
+      updateMany: {
+        filter: { updateStatus: requests.updateStatus.PENDING },
+        update: { $set: { updateStatus: requests.updateStatus.COMPLETE } },
+      },
+    },
+  ];
+}
+
+function assignPlayerStats(player, minsPlayed) {
   var playerStats = {
     playerId: player.personId,
-    name: player.firstName + " " + player.lastName,
-    matchup:
-      matchup == null
-        ? null
-        : {
-            playerId: matchup.personId,
-            name: matchup.firstName + " " + matchup.lastName,
-            pts: parseInt(matchup.points),
-            ast: parseInt(matchup.assists),
-            drb: parseInt(matchup.defReb),
-            orb: parseInt(matchup.offReb),
-            stl: parseInt(matchup.steals),
-            blk: parseInt(matchup.blocks),
-            tov: parseInt(matchup.turnovers),
-            fgm: parseInt(matchup.fgm),
-            fga: parseInt(matchup.fga),
-            fgp: parseFloat(matchup.fgp),
-            tpm: parseInt(matchup.tpm),
-            tpa: parseInt(matchup.tpa),
-            tpp: parseFloat(matchup.tpp),
-            ftm: parseInt(matchup.ftm),
-            fta: parseInt(matchup.fta),
-            ftp: parseFloat(matchup.ftp),
-            mp: matchupMinsPlayed,
-            pf: parseInt(matchup.pFouls),
-            fp: calculations.playerFantasyPoints(
-              parseInt(matchup.points),
-              parseInt(matchup.assists),
-              parseInt(matchup.defReb) + parseInt(matchup.offReb),
-              parseInt(matchup.steals),
-              parseInt(matchup.blocks),
-              parseInt(matchup.turnovers)
-            ),
-            atr: parseInt(matchup.assists) / parseInt(matchup.turnovers),
-            dnp: matchup.dnp,
-          },
     pos: player.pos,
-    pts: parseInt(player.points),
-    ast: parseInt(player.assists),
-    drb: parseInt(player.defReb),
-    orb: parseInt(player.offReb),
-    stl: parseInt(player.steals),
-    blk: parseInt(player.blocks),
-    tov: parseInt(player.turnovers),
-    fgm: parseInt(player.fgm),
-    fga: parseInt(player.fga),
-    fgp: parseFloat(player.fgp),
-    tpm: parseInt(player.tpm),
-    tpa: parseInt(player.tpa),
-    tpp: parseFloat(player.tpp),
-    ftm: parseInt(player.ftm),
-    fta: parseInt(player.fta),
-    ftp: parseFloat(player.ftp),
-    mp: minsPlayed,
-    pf: parseInt(player.pFouls),
-    fp: calculations.playerFantasyPoints(
-      parseInt(player.points),
-      parseInt(player.assists),
-      parseInt(player.defReb) + parseInt(player.offReb),
-      parseInt(player.steals),
-      parseInt(player.blocks),
-      parseInt(player.turnovers)
-    ),
-    atr: parseInt(player.assists) / parseInt(player.turnovers),
+    name: player.firstName + " " + player.lastName,
     dnp: player.dnp,
+    stats: {
+      pts: parseInt(player.points),
+      ast: parseInt(player.assists),
+      drb: parseInt(player.defReb),
+      orb: parseInt(player.offReb),
+      stl: parseInt(player.steals),
+      blk: parseInt(player.blocks),
+      tov: parseInt(player.turnovers),
+      fgm: parseInt(player.fgm),
+      fga: parseInt(player.fga),
+      fgp: parseFloat(player.fgp),
+      tpm: parseInt(player.tpm),
+      tpa: parseInt(player.tpa),
+      tpp: parseFloat(player.tpp),
+      ftm: parseInt(player.ftm),
+      fta: parseInt(player.fta),
+      ftp: parseFloat(player.ftp),
+      mp: minsPlayed,
+      pf: parseInt(player.pFouls),
+      fp: calculations.playerFantasyPoints(
+        parseInt(player.points),
+        parseInt(player.assists),
+        parseInt(player.defReb) + parseInt(player.offReb),
+        parseInt(player.steals),
+        parseInt(player.blocks),
+        parseInt(player.turnovers)
+      ),
+    },
   };
 
   return playerStats;
@@ -443,6 +520,16 @@ function updateQueue(currQueue, newQueue, maxGames) {
   return result;
 }
 
+function convertPos(oldPos) {
+  var oldCharArr = oldPos.split("");
+  var newCharArr = oldCharArr.filter((char) => {
+    return char != "-";
+  });
+  var newPos = newCharArr.join("");
+
+  return newPos;
+}
+
 module.exports.playerAge = playerAge;
 module.exports.convertDate = convertDate;
 module.exports.currentDate = currentDate;
@@ -452,8 +539,11 @@ module.exports.sortStats = sortStats;
 module.exports.assignTeamStats = assignTeamStats;
 module.exports.formatGame = formatGame;
 module.exports.formatPlayer = formatPlayer;
+module.exports.formatModelPlayer = formatModelPlayer;
 module.exports.assignPlayerStats = assignPlayerStats;
 module.exports.updateQueue = updateQueue;
 module.exports.parseSeasonalStats = parseSeasonalStats;
 module.exports.formatTeamUpdate = formatTeamUpdate;
 module.exports.formatGameUpdate = formatGameUpdate;
+module.exports.formatScheduleUpdate = formatScheduleUpdate;
+module.exports.convertPos = convertPos;

@@ -1,30 +1,60 @@
-/*
+const requests = require("./apiRequests.js");
 
-how to access game data "/data/10s/json/cms/2021/game/{{gameDate}}/{{gameId}}/playersPerGame.json"
+async function missingRoster(games, roster, seasonYear) {
+  var missingPlayers = [];
+  var gamesRoster = {};
+  var gamesRosterIds = [];
 
-Based on DR by Oliver
+  for (let i = 0; i < games.length; i++) {
+    for (let j = 0; j < games[i].team.activePlayers.length; j++) {
+      gamesRoster[games[i].team.activePlayers[j].playerId] =
+        games[i].team.activePlayers[j].playerId;
+    }
+  }
 
-Most stats are team based and then estimated to a player by dividing by 5 and multiplying by steals*blocks
+  gamesRosterIds = Object.keys(gamesRoster);
 
-assumptions of IDR:
-    - all teammates are equally good at forcing misses and turnovers.
-    - team DRtg can be used as a basis for individial defense, with stops providing an player deviation.
-    - all 5 players on court shoulder the same amount of defensive possessions. (In short, for all players %Tm_DPoss=0.2)
+  missingPlayers = await Promise.all(
+    gamesRosterIds
+      .filter((playerId) => {
+        for (let i = 0; i < roster.length; i++) {
+          if (roster[i].playerId === playerId) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .map(async function (playerId) {
+        var seasonalStats = await requests.getSeasonalStats(
+          requests.getPlayerStatsUrl(seasonYear, playerId)
+        );
 
-Glossary:
-IDR = player defensive rating
-TDR = team defensive rating
-D_Pts_per_ScPoss = how many points, on average, the player allows when the shot is made (or a foul is committed).
-Stops1 = countable stops caused by a player
-Stops2 = uncountable stops caused by a player
-FMwt = the difficulty of forcing a miss against the difficulty of grabbing a defensive rebound 
-DOR% = defensive offensive rebound percentage
-DFG% = defensive field goal percentage
-Opp_ORB = opponent offensive rebounds
-Team_DRB = team defensive rebounds
-Opp_FG% = opponent field goal percentage 
+        return {
+          playerId: playerId,
+          isActive: false,
+          pos: "",
+          name: "",
+          seasonalStats: seasonalStats,
+          data: {
+            usage: {
+              scoringUsage: 0,
+              playmakingUsage: 0,
+              reboundingUsage: 0,
+            },
+            games: [],
+            averages: {},
+            teamAverages: {},
+            matchupGames: [],
+            matchupAverages: {},
+            gp: 0,
+            gm: 0,
+          },
+        };
+      })
+  );
 
-*/
+  return missingPlayers;
+}
 
 function minutesPlayed(minsPlayed) {
   if (minsPlayed === "") {
@@ -368,13 +398,16 @@ function reboundingUsage(player, team) {
   return reboundingUsage;
 }
 
-function usagePercentages(player, team) {
+function usagePercentages(player, team, playerGamesPlayed, teamGamesPlayed) {
   // use these to predict increases to a players performance based on missing players in upcoming games
 
   var usagePercentages = {
-    scoringUsage: scoringUsage(player, team),
-    playmakingUsage: playmakingUsage(player, team),
-    reboundingUsage: reboundingUsage(player, team),
+    scoringUsage:
+      (scoringUsage(player, team) * playerGamesPlayed) / teamGamesPlayed,
+    playmakingUsage:
+      (playmakingUsage(player, team) * playerGamesPlayed) / teamGamesPlayed,
+    reboundingUsage:
+      (reboundingUsage(player, team) * playerGamesPlayed) / teamGamesPlayed,
   };
 
   return usagePercentages;
@@ -465,82 +498,22 @@ function lastNDifferential(recentGames, seasonAverages, n) {
   return lastNDifferential;
 }
 
-function positions(players, hId) {
-  var sortedPositions = {
-    hTeam: {
-      PG: [],
-      SG: [],
-      SF: [],
-      PF: [],
-      C: [],
-    },
-    vTeam: {
-      PG: [],
-      SG: [],
-      SF: [],
-      PF: [],
-      C: [],
-    },
-  };
+function positions(gamePlayers, leaguePlayers) {
+  var leaguePlayer;
+  var playerPos;
 
-  for (let i = 0; i < players.length; i++) {
-    var minsPlayed = minutesPlayed(players[i].min);
+  for (let i = 0; i < gamePlayers.length; i++) {
+    leaguePlayer = leaguePlayers.filter((leaguePlayer) => {
+      return leaguePlayer._id == gamePlayers[i].personId;
+    });
 
-    if (
-      players[i].teamId == hId &&
-      players[i].dnp == "" &&
-      players[i].pos != ""
-    ) {
-      sortedPositions.hTeam[players[i].pos] = {
-        playerId: players[i].personId,
-        mins: minsPlayed,
-        idx: i,
-      };
-    } else if (players[i].dnp == "" && players[i].pos != "") {
-      sortedPositions.vTeam[players[i].pos] = {
-        playerId: players[i].personId,
-        mins: minsPlayed,
-        idx: i,
-      };
+    if (leaguePlayer.length == 1) {
+      playerPos = leaguePlayer[0].pos;
+      gamePlayers[i].pos = playerPos;
+    } else {
+      gamePlayers[i].pos = "";
     }
   }
-
-  return sortedPositions;
-}
-
-function matchupStats(opponents, matchup) {
-  // only one matchup may need to figure out how to include others
-
-  var stats = {};
-
-  var individualMatchup = opponents.filter((player) => {
-    return player.playerId === matchup.playerId;
-  });
-
-  stats = {
-    pts: individualMatchup[0].pts,
-    ast: individualMatchup[0].ast,
-    drb: individualMatchup[0].drb,
-    orb: individualMatchup[0].orb,
-    stl: individualMatchup[0].stl,
-    blk: individualMatchup[0].blk,
-    tov: individualMatchup[0].tov,
-    fgm: individualMatchup[0].fgm,
-    fga: individualMatchup[0].fga,
-    fgp: individualMatchup[0].fgm / individualMatchup[0].fga,
-    tpm: individualMatchup[0].tpm,
-    tpa: individualMatchup[0].tpa,
-    tpp: individualMatchup[0].tpm / individualMatchup[0].tpa,
-    ftm: individualMatchup[0].ftm,
-    fta: individualMatchup[0].fta,
-    ftp: individualMatchup[0].ftm / individualMatchup[0].fta,
-    mp: individualMatchup[0].mp,
-    pf: individualMatchup[0].pf,
-    fp: individualMatchup[0].fp,
-    atr: individualMatchup[0].ast / individualMatchup[0].tov,
-  };
-
-  return stats;
 }
 
 function statDeviation(recentGames, averages, maxGames, stat) {
@@ -929,8 +902,6 @@ function leagueAverages(playerStats) {
 }
 
 function newAverages(games) {
-  var numOfGames;
-
   var totals = {
     pts: 0,
     ast: 0,
@@ -954,14 +925,13 @@ function newAverages(games) {
   var averages = {};
 
   for (let i = 0; i < games.length; i++) {
-    numOfGames = i;
     for (var stat in games[i]) {
       totals[stat] += games[i][stat];
     }
   }
 
   for (var stat in totals) {
-    averages[stat] = totals[stat] / numOfGames;
+    averages[stat] = totals[stat] / games.length;
   }
 
   return averages;
@@ -985,7 +955,159 @@ function currAverages(
   return currAverages;
 }
 
+function estimatedMatchupStats(opponents, playerPos) {
+  const matchupType = {
+    PRIMARY: 9,
+    SECONDARY: 3,
+    TERTIARY: 1,
+    ANTI: 0,
+  };
+
+  const matchupWeights = {
+    G: {
+      G: matchupType.PRIMARY,
+      GF: matchupType.SECONDARY,
+      FG: matchupType.TERTIARY,
+      F: matchupType.ANTI,
+      FC: matchupType.ANTI,
+      CF: matchupType.ANTI,
+      C: matchupType.ANTI,
+    },
+    GF: {
+      G: matchupType.SECONDARY,
+      GF: matchupType.PRIMARY,
+      FG: matchupType.SECONDARY,
+      F: matchupType.TERTIARY,
+      FC: matchupType.ANTI,
+      CF: matchupType.ANTI,
+      C: matchupType.ANTI,
+    },
+    FG: {
+      G: matchupType.TERTIARY,
+      GF: matchupType.SECONDARY,
+      FG: matchupType.PRIMARY,
+      F: matchupType.SECONDARY,
+      FC: matchupType.TERTIARY,
+      CF: matchupType.ANTI,
+      C: matchupType.ANTI,
+    },
+    F: {
+      G: matchupType.ANTI,
+      GF: matchupType.TERTIARY,
+      FG: matchupType.SECONDARY,
+      F: matchupType.PRIMARY,
+      FC: matchupType.SECONDARY,
+      CF: matchupType.TERTIARY,
+      C: matchupType.ANTI,
+    },
+    FC: {
+      G: matchupType.ANTI,
+      GF: matchupType.ANTI,
+      FG: matchupType.TERTIARY,
+      F: matchupType.SECONDARY,
+      FC: matchupType.PRIMARY,
+      CF: matchupType.SECONDARY,
+      C: matchupType.TERTIARY,
+    },
+    CF: {
+      G: matchupType.ANTI,
+      GF: matchupType.ANTI,
+      FG: matchupType.ANTI,
+      F: matchupType.TERTIARY,
+      FC: matchupType.SECONDARY,
+      CF: matchupType.PRIMARY,
+      C: matchupType.SECONDARY,
+    },
+    C: {
+      G: matchupType.ANTI,
+      GF: matchupType.ANTI,
+      FG: matchupType.ANTI,
+      F: matchupType.ANTI,
+      FC: matchupType.TERTIARY,
+      CF: matchupType.SECONDARY,
+      C: matchupType.PRIMARY,
+    },
+  };
+
+  if (playerPos == "") {
+    return {};
+  }
+
+  var matchupStats = {
+    pts: 0,
+    ast: 0,
+    drb: 0,
+    orb: 0,
+    stl: 0,
+    blk: 0,
+    tov: 0,
+    fgm: 0,
+    fga: 0,
+    tpm: 0,
+    tpa: 0,
+    ftm: 0,
+    fta: 0,
+    mp: 0,
+    pf: 0,
+    fp: 0,
+  };
+
+  var opponentPositions = {
+    G: opponents.filter((opponent) => {
+      return opponent.pos === "G";
+    }).length,
+    GF: opponents.filter((opponent) => {
+      return opponent.pos === "GF";
+    }).length,
+    FG: opponents.filter((opponent) => {
+      return opponent.pos === "FG";
+    }).length,
+    F: opponents.filter((opponent) => {
+      return opponent.pos === "F";
+    }).length,
+    FC: opponents.filter((opponent) => {
+      return opponent.pos === "FC";
+    }).length,
+    CF: opponents.filter((opponent) => {
+      return opponent.pos === "CF";
+    }).length,
+    C: opponents.filter((opponent) => {
+      return opponent.pos === "C";
+    }).length,
+  };
+
+  var sumProduct = 0;
+
+  for (let position in matchupWeights[playerPos]) {
+    sumProduct +=
+      matchupWeights[playerPos][position] * opponentPositions[position];
+  }
+
+  var factor = 1 / sumProduct;
+
+  for (let i = 0; i < opponents.length; i++) {
+    if (opponents[i].pos != "" && opponents[i].stats.mp > 0) {
+      for (let stat in matchupStats) {
+        matchupStats[stat] +=
+          opponents[i].stats[stat] *
+          factor *
+          matchupWeights[playerPos][opponents[i].pos];
+      }
+    }
+  }
+  return matchupStats;
+}
+
 function usageRankings(rankings, prop) {
+  var sum = 0;
+  for (let j = 0; j < rankings.length; j++) {
+    sum += rankings[j][prop];
+  }
+
+  for (let i = 0; i < rankings.length; i++) {
+    rankings[i][prop] *= 100 / sum;
+  }
+
   rankings.sort((a, b) => {
     return a[prop] < b[prop] ? 1 : a[prop] > b[prop] ? -1 : 0;
   });
@@ -1001,7 +1123,6 @@ module.exports.teamPace = teamPace;
 module.exports.lastNDifferential = lastNDifferential;
 module.exports.playerFantasyPoints = playerFantasyPoints;
 module.exports.positions = positions;
-module.exports.matchupStats = matchupStats;
 module.exports.lastNAverages = lastNAverages;
 module.exports.playerDeviations = playerDeviations;
 module.exports.playerDifferentials = playerDifferentials;
@@ -1013,3 +1134,5 @@ module.exports.newAverages = newAverages;
 module.exports.currAverages = currAverages;
 module.exports.usagePercentages = usagePercentages;
 module.exports.usageRankings = usageRankings;
+module.exports.estimatedMatchupStats = estimatedMatchupStats;
+module.exports.missingRoster = missingRoster;
