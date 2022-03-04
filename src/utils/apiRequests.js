@@ -1,43 +1,12 @@
 const axios = require("axios");
 const calculations = require("./calculations.js");
-const misc = require("./misc.js");
+const misc = require("./helpers.js");
 
 const updateStatus = {
   COMPLETE: "complete",
   NOTREADY: "not ready",
   PENDING: "pending",
 };
-
-async function newApi() {
-  const url =
-    "https://stats.nba.com/stats/leaguedashplayerstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&GameSegment=&Height=&LastNGames=0&LeagueID=00&Location=&MeasureType=Base&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjust=N&PerMode=PerGame&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2019-20&SeasonSegment=&SeasonType=Regular+Season&ShotClockRange=&StarterBench=&TeamID=0&TwoWay=0&VsConference=&VsDivision=&Weight=";
-  const headers = {
-    Host: "stats.nba.com",
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0",
-    Accept: "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.5",
-    Referer: "https://stats.nba.com/",
-    "Accept-Encoding": "gzip, deflate, br",
-    Connection: "keep-alive",
-    "x-nba-stats-origin": "stats",
-    "x-nba-stats-token": "true",
-  };
-  console.log("running");
-  var result;
-  await axios
-    .get(url, headers)
-    .then((res) => {
-      result = res.data;
-      console.log(result);
-    })
-    .catch((err) => {
-      console.error(err);
-      return err;
-    });
-
-  return;
-}
 
 async function getSeasonYear() {
   const url = "https://data.nba.net/10s/prod/v1/today.json";
@@ -248,7 +217,7 @@ async function getUpdatedSchedule(newGames, players, seasonYear) {
   return cleanedGames;
 }
 
-async function getTeams(leaguePlayers, seasonYear, model) {
+async function getTeams(leaguePlayers, seasonYear) {
   var url = getTeamsUrl(seasonYear);
   var teams = [];
   var oldRosters = {};
@@ -429,19 +398,17 @@ async function getTeamRoster(url) {
   return roster;
 }
 
-async function getPlayers(seasonYear, model) {
+async function getPlayers(seasonYear) {
   var url = getPlayersUrl(seasonYear);
   var players = [];
   await axios
     .get(url)
     .then(async function (res) {
       players = res.data.league.standard;
-      if (model) {
-        await addAllSeasonStats(players, seasonYear);
-        await addPrevSeasonStats(players, seasonYear);
-      } else {
-        await addAllSeasonStats(players, seasonYear);
-      }
+      console.log(seasonYear);
+
+      console.log(players[0].heightFeet);
+      await addAllSeasonStats(players, seasonYear);
     })
     .catch((err) => {
       console.error(err);
@@ -460,29 +427,6 @@ async function addAllSeasonStats(players, seasonYear) {
     };
     players[i].pos = misc.convertPos(players[i].pos);
   }
-  return players;
-}
-
-async function addPrevSeasonStats(players, seasonYear) {
-  for (let i = 0; i < players.length; i++) {
-    console.log(players.length - i);
-    var seasonalStats = await getSeasonalStats(
-      getPlayerStatsUrl(seasonYear - 1, players[i].personId)
-    );
-
-    if (
-      seasonalStats.length == 0 ||
-      seasonalStats[0].seasonYear != seasonYear - 1
-    ) {
-      players[i].prevSeason = {};
-      // players.splice(i, 1);
-      // i--;
-    } else {
-      players[i].prevSeason = seasonalStats[0];
-      // players[i].pos = misc.convertPos(players[i].pos);
-    }
-  }
-
   return players;
 }
 

@@ -249,72 +249,6 @@ function parseSeasonalStats(seasonalStats) {
   return seasonsPlayed;
 }
 
-function formatModelPlayer(player) {
-  var cleanedPlayer = {};
-  var prevSeason = {};
-  var seasonsPlayed;
-
-  if (player.stats.season != undefined) {
-    seasonsPlayed = parseSeasonalStats(player.stats.season);
-  }
-
-  if (player.prevSeason != undefined && player.prevSeason.teams != undefined) {
-    var teamsPlayed = [];
-    for (let i = 0; i < player.prevSeason.teams.length; i++) {
-      var currTeam = player.prevSeason.teams[i];
-      var team = parseSeasonStats(currTeam, true);
-      teamsPlayed.push(team);
-      numOfTeams = i;
-    }
-    if (numOfTeams == 1) {
-      prevSeason = {
-        seasonYear: player.prevSeason.seasonYear,
-        teams: teamsPlayed,
-        perGame: teamsPlayed[0].perGame,
-        perMin: teamsPlayed[0].perMin,
-        totals: teamsPlayed[0].totals,
-      };
-    } else {
-      prevSeason = parseSeasonStats(player.prevSeason.total, false);
-      prevSeason.seasonYear = player.prevSeason.seasonYear;
-      prevSeason.teams = teamsPlayed;
-    }
-  }
-
-  cleanedPlayer = {
-    _id: player.personId,
-    name: player.firstName + " " + player.lastName,
-    teamId: player.teamId,
-    pos: player.pos,
-    dateOfBirthUTC: player.dateOfBirthUTC,
-    daysOld: daysOld(player.dateOfBirthUTC),
-    yearsPro: parseInt(player.yearsPro),
-    country: player.country,
-    prevSeason: prevSeason,
-    stats: {
-      season: seasonsPlayed,
-      recent: {
-        playedGames: [],
-        missedGames: [],
-        differential: {
-          last3: {},
-          last5: {},
-          last7: {},
-          last10: {},
-        },
-        advanced: {
-          last3: {},
-          last5: {},
-          last7: {},
-          last10: {},
-        },
-        deviation: {},
-      },
-    },
-  };
-  return cleanedPlayer;
-}
-
 function formatPlayer(player) {
   var cleanedPlayer = {};
   var seasonsPlayed = [];
@@ -539,7 +473,6 @@ module.exports.sortStats = sortStats;
 module.exports.assignTeamStats = assignTeamStats;
 module.exports.formatGame = formatGame;
 module.exports.formatPlayer = formatPlayer;
-module.exports.formatModelPlayer = formatModelPlayer;
 module.exports.assignPlayerStats = assignPlayerStats;
 module.exports.updateQueue = updateQueue;
 module.exports.parseSeasonalStats = parseSeasonalStats;

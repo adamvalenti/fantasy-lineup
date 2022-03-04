@@ -2,6 +2,21 @@ import * as tf from "@tensorflow/tfjs";
 import { lstm } from "@tensorflow/tfjs-layers/dist/exports_layers";
 
 function generateDataset(size) {
+  /*
+  might make sense to include all games for all players and fill inactive games with (-seasonAverage).  Allows time between missed games to be tracked.
+  high level dataset array:
+  [(player1)[(game1)[stat1, stat2,...,statN, label],(game2)[stats],...,(gameN)[stats]],(player2)[games],...,(playerN)[games]]
+  
+  gameInstance (will be array rather than object) = {
+    playerDaysOld: 0-1
+    prevSznPos: G: 0/1,...,C: 0/1,
+    prevSznPS: pts, ast,...,gp
+    prevSznTS: bxscr, pace, usgBP, mUsgBP
+    prevGameStats: playerBxscr (w/ pos), teamBxscr, mUsg, oppBxscr, *matchup
+    currGameStats: didPlay
+  }
+  */
+
   var dataSet = [];
 }
 
