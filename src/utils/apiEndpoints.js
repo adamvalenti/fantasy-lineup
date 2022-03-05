@@ -1,14 +1,18 @@
-function getScheduleUrl(seasonYear) {
+function root() {
+  return "https://data.nba.net/10s/prod/v1/today.json";
+}
+
+function schedule(seasonYear) {
   return "http://data.nba.net/10s/prod/v1/" + seasonYear + "/schedule.json";
 }
 
-function getGameUrl(gameDate, gameId) {
+function game(gameDate, gameId) {
   return (
     "https://data.nba.net/prod/v1/" + gameDate + "/" + gameId + "_boxscore.json"
   );
 }
 
-function getPlayerStatsUrl(seasonYear, playerId) {
+function playerProfile(seasonYear, playerId) {
   return (
     "https://data.nba.net/10s/prod/v1/" +
     seasonYear +
@@ -18,15 +22,15 @@ function getPlayerStatsUrl(seasonYear, playerId) {
   );
 }
 
-function getPlayersUrl(seasonYear) {
+function players(seasonYear) {
   return "https://data.nba.net/10s/prod/v1/" + seasonYear + "/players.json";
 }
 
-function getTeamsUrl(seasonYear) {
+function teams(seasonYear) {
   return "http://data.nba.net/10s/prod/v2/" + seasonYear + "/teams.json";
 }
 
-function getTeamRosterUrl(seasonYear, teamUrlName) {
+function roster(seasonYear, teamUrlName) {
   return (
     "http://data.nba.net/10s/prod/v1/" +
     seasonYear +
@@ -35,3 +39,11 @@ function getTeamRosterUrl(seasonYear, teamUrlName) {
     "/roster.json"
   );
 }
+
+module.exports.root = root;
+module.exports.schedule = schedule;
+module.exports.game = game;
+module.exports.playerProfile = playerProfile;
+module.exports.players = players;
+module.exports.teams = teams;
+module.exports.roster = roster;

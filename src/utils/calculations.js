@@ -1,4 +1,5 @@
 const requests = require("./apiRequests.js");
+const endpoints = require("./apiEndpoints.js");
 
 async function missingRoster(games, roster, seasonYear) {
   var missingPlayers = [];
@@ -26,7 +27,7 @@ async function missingRoster(games, roster, seasonYear) {
       })
       .map(async function (playerId) {
         var seasonalStats = await requests.getSeasonalStats(
-          requests.getPlayerStatsUrl(seasonYear, playerId)
+          endpoints.playerProfile(seasonYear, playerId)
         );
 
         return {
@@ -54,17 +55,6 @@ async function missingRoster(games, roster, seasonYear) {
   );
 
   return missingPlayers;
-}
-
-function minutesPlayed(minsPlayed) {
-  if (minsPlayed === "") {
-    minsPlayed = 0;
-  } else {
-    var mins = parseInt(minsPlayed.split(":")[0]);
-    var secs = parseInt(minsPlayed.split(":")[1]);
-    minsPlayed = secs >= 30 ? mins + 1 : mins;
-  }
-  return minsPlayed;
 }
 
 function advancedPlayerStats(player, team, opponent) {
@@ -496,24 +486,6 @@ function lastNDifferential(recentGames, seasonAverages, n) {
     fp: lastNStatAverage(recentGames, "player", n, "fp") - seasonAverages.fppg,
   };
   return lastNDifferential;
-}
-
-function positions(gamePlayers, leaguePlayers) {
-  var leaguePlayer;
-  var playerPos;
-
-  for (let i = 0; i < gamePlayers.length; i++) {
-    leaguePlayer = leaguePlayers.filter((leaguePlayer) => {
-      return leaguePlayer._id == gamePlayers[i].personId;
-    });
-
-    if (leaguePlayer.length == 1) {
-      playerPos = leaguePlayer[0].pos;
-      gamePlayers[i].pos = playerPos;
-    } else {
-      gamePlayers[i].pos = "";
-    }
-  }
 }
 
 function statDeviation(recentGames, averages, maxGames, stat) {
@@ -955,6 +927,23 @@ function currAverages(
   return currAverages;
 }
 
+function usageRankings(rankings, prop) {
+  var sum = 0;
+  for (let j = 0; j < rankings.length; j++) {
+    sum += rankings[j][prop];
+  }
+
+  for (let i = 0; i < rankings.length; i++) {
+    rankings[i][prop] *= 100 / sum;
+  }
+
+  rankings.sort((a, b) => {
+    return a[prop] < b[prop] ? 1 : a[prop] > b[prop] ? -1 : 0;
+  });
+
+  return rankings;
+}
+
 function estimatedMatchupStats(opponents, playerPos) {
   const matchupType = {
     PRIMARY: 9,
@@ -1098,31 +1087,24 @@ function estimatedMatchupStats(opponents, playerPos) {
   return matchupStats;
 }
 
-function usageRankings(rankings, prop) {
-  var sum = 0;
-  for (let j = 0; j < rankings.length; j++) {
-    sum += rankings[j][prop];
+function minutesPlayed(minsPlayed) {
+  if (minsPlayed === "") {
+    minsPlayed = 0;
+  } else {
+    var mins = parseInt(minsPlayed.split(":")[0]);
+    var secs = parseInt(minsPlayed.split(":")[1]);
+    minsPlayed = secs >= 30 ? mins + 1 : mins;
   }
-
-  for (let i = 0; i < rankings.length; i++) {
-    rankings[i][prop] *= 100 / sum;
-  }
-
-  rankings.sort((a, b) => {
-    return a[prop] < b[prop] ? 1 : a[prop] > b[prop] ? -1 : 0;
-  });
-
-  return rankings;
+  return minsPlayed;
 }
 
-module.exports.advancedPlayerStats = advancedPlayerStats;
 module.exports.minutesPlayed = minutesPlayed;
+module.exports.advancedPlayerStats = advancedPlayerStats;
 module.exports.leagueConstants = leagueConstants;
 module.exports.numOfTeamPos = numOfTeamPos;
 module.exports.teamPace = teamPace;
 module.exports.lastNDifferential = lastNDifferential;
 module.exports.playerFantasyPoints = playerFantasyPoints;
-module.exports.positions = positions;
 module.exports.lastNAverages = lastNAverages;
 module.exports.playerDeviations = playerDeviations;
 module.exports.playerDifferentials = playerDifferentials;
@@ -1134,5 +1116,5 @@ module.exports.newAverages = newAverages;
 module.exports.currAverages = currAverages;
 module.exports.usagePercentages = usagePercentages;
 module.exports.usageRankings = usageRankings;
-module.exports.estimatedMatchupStats = estimatedMatchupStats;
 module.exports.missingRoster = missingRoster;
+module.exports.estimatedMatchupStats = estimatedMatchupStats;

@@ -1,0 +1,8 @@
+misc -> helpers
+apiEndpoints file
+updatedSchedule moved to processing
+
+TODO:
+debug getData()
+move constants into constant file
+break out updateNewGames into helper functions

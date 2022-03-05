@@ -3,6 +3,7 @@ const misc = require("./helpers.js");
 const calculations = require("./calculations.js");
 const { MongoClient } = require("mongodb");
 const config = require("../../config.json");
+const processing = require("./processing.js");
 
 const statType = {
   PLAYER: "player",
@@ -142,80 +143,83 @@ async function main() {
 
 async function getData() {
   const client = await mongoClient();
-  const modelYear = (await requests.getSeasonYear()) - 2;
+  const seasonYear = (await requests.getSeasonYear()) - 3;
   misc.displayCurrentTime();
   try {
     await client.connect();
 
-    await removeCollection(
-      client,
-      database.NBAFANTASYLINEUP,
-      collections[modelYear].PLAYERS
-    );
+    // await removeCollection(
+    //   client,
+    //   database.NBAFANTASYLINEUP,
+    //   historicalCollection[seasonYear].PLAYERS
+    // );
 
-    await removeCollection(
-      client,
-      database.NBAFANTASYLINEUP,
-      collections[modelYear].SCHEDULE
-    );
+    // await removeCollection(
+    //   client,
+    //   database.NBAFANTASYLINEUP,
+    //   historicalCollection[seasonYear].SCHEDULE
+    // );
 
-    await removeCollection(
-      client,
-      database.NBAFANTASYLINEUP,
-      collections[modelYear].TEAMS
-    );
+    // await removeCollection(
+    //   client,
+    //   database.NBAFANTASYLINEUP,
+    //   historicalCollection[seasonYear].TEAMS
+    // );
 
-    await createPlayers(
-      client,
-      await requests.getPlayers(modelYear),
-      database.NBAFANTASYLINEUP,
-      collections[modelYear].PLAYERS
-    );
+    // await createPlayers(
+    //   client,
+    //   await processing.players(seasonYear),
+    //   database.NBAFANTASYLINEUP,
+    //   historicalCollection[seasonYear].PLAYERS
+    // );
 
     const players = await pullCollection(
       client,
-      collections[modelYear].PLAYERS
+      historicalCollection[seasonYear].PLAYERS
     );
 
-    await createGames(
-      client,
-      await requests.getSchedule(modelYear),
-      database.NBAFANTASYLINEUP,
-      collections[modelYear].SCHEDULE
-    );
+    // await createGames(
+    //   client,
+    //   await processing.schedule(
+    //     seasonYear,
+    //     await pullCollection(client, historicalCollection[seasonYear].SCHEDULE)
+    //   ),
+    //   database.NBAFANTASYLINEUP,
+    //   historicalCollection[seasonYear].SCHEDULE
+    // );
 
-    await createTeams(
-      client,
-      await requests.getTeams(players, modelYear),
-      database.NBAFANTASYLINEUP,
-      collections[modelYear].TEAMS
-    );
+    // await createTeams(
+    //   client,
+    //   await processing.teams(players, seasonYear),
+    //   database.NBAFANTASYLINEUP,
+    //   historicalCollection[seasonYear].TEAMS
+    // );
 
-    misc.displayCurrentTime();
+    // misc.displayCurrentTime();
 
-    await updateGames(
-      client,
-      await requests.getUpdatedSchedule(
-        gamesToBeUpdated(
-          await toBeUpdated(
-            client,
-            database.NBAFANTASYLINEUP,
-            collections[modelYear].SCHEDULE
-          )
-        ),
-        players,
-        modelYear
-      ),
-      collections[modelYear].SCHEDULE
-    );
+    // await sendUpdates(
+    //   client,
+    //   historicalCollection[seasonYear].SCHEDULE,
+    //   await processing.scheduleUpdates(
+    //     gamesToBeUpdated(
+    //       await toBeUpdated(
+    //         client,
+    //         database.NBAFANTASYLINEUP,
+    //         historicalCollection[seasonYear].SCHEDULE
+    //       )
+    //     ),
+    //     players,
+    //     seasonYear
+    //   )
+    // );
 
     misc.displayCurrentTime();
     await updateNewGames(
       client,
-      collections[modelYear].SCHEDULE,
-      collections[modelYear].TEAMS,
-      collections[modelYear].PLAYERS,
-      modelYear
+      historicalCollection[seasonYear].SCHEDULE,
+      historicalCollection[seasonYear].TEAMS,
+      historicalCollection[seasonYear].PLAYERS,
+      seasonYear
     );
   } catch (error) {
     console.error(error);
@@ -347,7 +351,7 @@ async function updateNewGames(
   seasonYear
 ) {
   var gameFilter = {
-    updateStatus: requests.updateStatus.PENDING,
+    updateStatus: processing.updateStatus.PENDING,
     seasonStageId: 002,
   };
   var playedGames = await pullCollection(
@@ -862,7 +866,10 @@ async function updateNewGames(
       return {
         _id: player.playerId,
         name: player.name,
-        teamId: player.seasonalStats[0].teams[0].teamId,
+        teamId:
+          player.seasonalStats[0] != undefined
+            ? player.seasonalStats[0].teams[0].teamId
+            : "",
         pos: player.pos,
         dateOfBirthUTC: "",
         daysOld: "",
@@ -1093,7 +1100,7 @@ async function toBeUpdated(
       .db(db)
       .collection(collection)
       .find({
-        updateStatus: requests.updateStatus.NOTREADY,
+        updateStatus: processing.updateStatus.NOTREADY,
         startDateEastern: { $lt: currDate },
       })
       // .limit(200)
@@ -1287,26 +1294,15 @@ function gamesToBeUpdated(results) {
   return games;
 }
 
-async function updateGames(client, games, collection) {
-  var game = {};
-  var gameUpdate;
-  var updates = [];
-
-  for (let i = 0; i < games.length; i++) {
-    game = misc.formatGame(games[i]);
-    gameUpdate = misc.formatGameUpdate(game);
-    updates.push(gameUpdate);
-  }
-
-  await sendUpdates(client, collection, updates);
-  console.log("All games Updated");
-}
-
 async function sendUpdates(client, collection, updates) {
-  const result = await client
+  const bulkWriteResult = await client
     .db(database.NBAFANTASYLINEUP)
     .collection(collection)
     .bulkWrite(updates);
+
+  if (bulkWriteResult.result.ok == 1) {
+    console.log(bulkWriteResult.modifiedCount + " updates were made");
+  }
 }
 
 async function updateGame(client, game) {
@@ -1331,30 +1327,10 @@ async function createGames(
   db = database.NBAFANTASYLINEUP,
   collection = collections[2021].SCHEDULE
 ) {
-  var existingGames = await pullCollection(client, collections[2021].SCHEDULE);
-  var cleanedGames = [];
-  var game = {};
-  for (let i = 0; i < games.length; i++) {
-    if (
-      existingGames.filter((game) => {
-        return game._id == games[i].gameId;
-      }).length > 0
-    ) {
-      games.splice(i, 1);
-      i--;
-    } else {
-      game = misc.formatGame(games[i]);
-      cleanedGames.push(game);
-    }
-  }
+  const result = await client.db(db).collection(collection).insertMany(games);
 
-  const result = await client
-    .db(db)
-    .collection(collection)
-    .insertMany(cleanedGames);
-
-  if (Object.keys(result.insertedIds).length == cleanedGames.length) {
-    console.log(cleanedGames.length + " games created");
+  if (Object.keys(result.insertedIds).length == games.length) {
+    console.log(games.length + " games created");
   } else {
     console.log("Error occcured during game creation");
   }
@@ -1367,34 +1343,14 @@ async function createTeams(
   collection = collections[2021].TEAMS
 ) {
   const options = { ordered: true };
-  var cleanedTeams = [];
-  var team = {};
-
-  for (let i = 0; i < teams.length; i++) {
-    team = {
-      _id: teams[i].teamId,
-      city: teams[i].city,
-      fullName: teams[i].fullName,
-      confName: teams[i].confName,
-      tricode: teams[i].tricode,
-      divName: teams[i].divName,
-      nickname: teams[i].nickname,
-      urlName: teams[i].urlName,
-      gp: 0,
-      gamelog: [],
-      roster: teams[i].roster,
-    };
-
-    cleanedTeams.push(team);
-  }
 
   const result = await client
     .db(db)
     .collection(collection)
-    .insertMany(cleanedTeams, options);
+    .insertMany(teams, options);
 
-  if (Object.keys(result.insertedIds).length == cleanedTeams.length) {
-    console.log(cleanedTeams.length + " teams created");
+  if (Object.keys(result.insertedIds).length == teams.length) {
+    console.log(teams.length + " teams created");
   } else {
     console.log("Error occcured during team creation");
   }
@@ -1406,19 +1362,10 @@ async function createPlayers(
   db = database.NBAFANTASYLINEUP,
   collection = collections[2021].PLAYERS
 ) {
-  var cleanedPlayers = [];
+  const result = await client.db(db).collection(collection).insertMany(players);
 
-  for (let i = 0; i < players.length; i++) {
-    cleanedPlayers.push(misc.formatPlayer(players[i]));
-  }
-
-  const result = await client
-    .db(db)
-    .collection(collection)
-    .insertMany(cleanedPlayers);
-
-  if (Object.keys(result.insertedIds).length == cleanedPlayers.length) {
-    console.log(cleanedPlayers.length + " players created");
+  if (Object.keys(result.insertedIds).length == players.length) {
+    console.log(players.length + " players created");
   } else {
     console.log("Error occcured during player creation");
   }

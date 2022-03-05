@@ -1,15 +1,8 @@
 const axios = require("axios");
-const calculations = require("./calculations.js");
-const misc = require("./helpers.js");
-
-const updateStatus = {
-  COMPLETE: "complete",
-  NOTREADY: "not ready",
-  PENDING: "pending",
-};
+const endpoints = require("./apiEndpoints.js");
 
 async function getSeasonYear() {
-  const url = "https://data.nba.net/10s/prod/v1/today.json";
+  const url = endpoints.root();
   var seasonYear;
   await axios
     .get(url)
@@ -24,144 +17,29 @@ async function getSeasonYear() {
   return seasonYear;
 }
 
-function getScheduleUrl(seasonYear) {
-  return "http://data.nba.net/10s/prod/v1/" + seasonYear + "/schedule.json";
-}
-
-function getGameUrl(gameDate, gameId) {
-  return (
-    "https://data.nba.net/prod/v1/" + gameDate + "/" + gameId + "_boxscore.json"
-  );
-}
-
-function getPlayerStatsUrl(seasonYear, playerId) {
-  return (
-    "https://data.nba.net/10s/prod/v1/" +
-    seasonYear +
-    "/players/" +
-    playerId +
-    "_profile.json"
-  );
-}
-
-function getPlayersUrl(seasonYear) {
-  return "https://data.nba.net/10s/prod/v1/" + seasonYear + "/players.json";
-}
-
-function getTeamsUrl(seasonYear) {
-  return "http://data.nba.net/10s/prod/v2/" + seasonYear + "/teams.json";
-}
-
-function getTeamRosterUrl(seasonYear, teamUrlName) {
-  return (
-    "http://data.nba.net/10s/prod/v1/" +
-    seasonYear +
-    "/teams/" +
-    teamUrlName +
-    "/roster.json"
-  );
-}
-
-async function getGameStats(url, players) {
-  var gameStats = {
-    hTeam: {
-      team: {},
-      player: [],
-    },
-    vTeam: {
-      team: {},
-      player: [],
-    },
-  };
-
+async function getPlayers(seasonYear) {
+  const url = endpoints.players(seasonYear);
+  var players = [];
   await axios
     .get(url)
     .then((res) => {
-      var results = res.data.stats;
-      if (results == undefined) {
-        return null;
-      }
-      var teamMinsPlayed = calculations.minutesPlayed(results.hTeam.totals.min);
-      var hId = res.data.basicGameData.hTeam.teamId;
-
-      misc.assignTeamStats(
-        gameStats.vTeam.team,
-        results.vTeam.totals,
-        teamMinsPlayed
-      );
-      misc.assignTeamStats(
-        gameStats.hTeam.team,
-        results.hTeam.totals,
-        teamMinsPlayed
-      );
-
-      calculations.positions(results.activePlayers, players, hId);
-
-      for (let i = 0; i < results.activePlayers.length; i++) {
-        var minsPlayed = calculations.minutesPlayed(
-          results.activePlayers[i].min
-        );
-        var playerStats = {};
-
-        if (results.activePlayers[i].teamId == hId) {
-          playerStats = misc.assignPlayerStats(
-            results.activePlayers[i],
-            minsPlayed
-          );
-          gameStats.hTeam.player.push(playerStats);
-        } else {
-          playerStats = misc.assignPlayerStats(
-            results.activePlayers[i],
-            minsPlayed
-          );
-          gameStats.vTeam.player.push(playerStats);
-        }
-      }
-
-      for (let i = 0; i < gameStats.hTeam.player.length; i++) {
-        var hTeamPlayer = gameStats.hTeam.player[i];
-
-        if (hTeamPlayer.pos == "" || hTeamPlayer.stats.mp == 0) {
-          hTeamPlayer.matchup = {};
-        } else {
-          hTeamPlayer.matchup = calculations.estimatedMatchupStats(
-            gameStats.vTeam.player,
-            hTeamPlayer.pos
-          );
-        }
-      }
-
-      for (let i = 0; i < gameStats.vTeam.player.length; i++) {
-        var vTeamPlayer = gameStats.vTeam.player[i];
-
-        if (vTeamPlayer.pos == "" || vTeamPlayer.stats.mp == 0) {
-          vTeamPlayer.matchup = {};
-        } else {
-          vTeamPlayer.matchup = calculations.estimatedMatchupStats(
-            gameStats.hTeam.player,
-            hTeamPlayer.pos
-          );
-        }
-      }
+      players = res.data.league.standard;
     })
     .catch((err) => {
       console.error(err);
       return err;
     });
-  return gameStats;
+  return players;
 }
 
 async function getSchedule(seasonYear) {
-  var url = getScheduleUrl(seasonYear);
+  const url = endpoints.schedule(seasonYear);
   var games = [];
 
   await axios
     .get(url)
     .then((res) => {
       games = res.data.league.standard;
-      for (let i = 0; i < games.length; i++) {
-        games[i].updateStatus = updateStatus.NOTREADY;
-      }
     })
     .catch((err) => {
       console.error(err);
@@ -170,206 +48,14 @@ async function getSchedule(seasonYear) {
   return games;
 }
 
-async function getUpdatedSchedule(newGames, players, seasonYear) {
-  var cleanedGames = [];
-  var games = await getSchedule(seasonYear);
-  // var league = calculations.leagueConstants();
-
-  for (let i = 0; i < games.length; i++) {
-    if (games[i].gameId == newGames[0].gameId) {
-      cleanedGames = games.splice(i, newGames.length);
-      i = games.length;
-    }
-  }
-  for (let i = 0; i < cleanedGames.length; i++) {
-    console.log(cleanedGames.length - i);
-    var gameStats = await getGameStats(
-      getGameUrl(cleanedGames[i].startDateEastern, cleanedGames[i].gameId),
-      players
-    );
-    if (gameStats != null) {
-      cleanedGames[i].updateStatus = updateStatus.PENDING;
-      cleanedGames[i].hTeam.stats = gameStats.hTeam;
-      cleanedGames[i].vTeam.stats = gameStats.vTeam;
-
-      cleanedGames[i].hTeam.stats.team.pos = calculations.numOfTeamPos(
-        cleanedGames[i].hTeam.stats.team,
-        cleanedGames[i].vTeam.stats.team
-      );
-
-      cleanedGames[i].vTeam.stats.team.pos = calculations.numOfTeamPos(
-        cleanedGames[i].vTeam.stats.team,
-        cleanedGames[i].hTeam.stats.team
-      );
-
-      cleanedGames[i].hTeam.stats.team.pace = calculations.teamPace(
-        cleanedGames[i].hTeam.stats.team,
-        cleanedGames[i].vTeam.stats.team
-      );
-
-      cleanedGames[i].vTeam.stats.team.pace = calculations.teamPace(
-        cleanedGames[i].vTeam.stats.team,
-        cleanedGames[i].hTeam.stats.team
-      );
-    }
-  }
-
-  return cleanedGames;
-}
-
-async function getTeams(leaguePlayers, seasonYear) {
-  var url = getTeamsUrl(seasonYear);
+async function getTeams(seasonYear) {
+  const url = endpoints.teams(seasonYear);
   var teams = [];
-  var oldRosters = {};
-  var remainingPlayers = [];
 
   await axios
     .get(url)
-    .then(async function (res) {
+    .then((res) => {
       teams = res.data.league.standard;
-      var team;
-      for (let i = 0; i < teams.length; i++) {
-        team = teams[i];
-        if (team.isNBAFranchise) {
-          team.roster = await getTeamRoster(
-            getTeamRosterUrl(seasonYear, team.urlName)
-          );
-          for (let j = 0; j < team.roster.length; j++) {
-            var player = team.roster[j];
-            var leaguePlayer = leaguePlayers.filter((leaguePlayer) => {
-              return leaguePlayer._id == player.playerId;
-            });
-
-            leaguePlayers = leaguePlayers.filter((leaguePlayer) => {
-              return leaguePlayer._id != player.playerId;
-            });
-
-            if (leaguePlayer.length == 1) {
-              player.pos = leaguePlayer[0].pos;
-              player.name = leaguePlayer[0].name;
-              player.seasonalStats = leaguePlayer[0].stats.season;
-            }
-
-            player.data = {
-              usage: {
-                scoringUsage: 0,
-                playmakingUsage: 0,
-                reboundingUsage: 0,
-              },
-              games: [],
-              averages: {},
-              teamAverages: {},
-              matchupGames: [],
-              matchupAverages: {},
-              gp: 0,
-              gm: 0,
-            };
-
-            if (
-              player.seasonalStats != undefined &&
-              player.seasonalStats.length != 0
-            ) {
-              for (let k = 0; k < player.seasonalStats[0].teams.length; k++) {
-                var currTeam = player.seasonalStats[0].teams[k];
-                if (currTeam.teamId != team.teamId && currTeam.teamId != "0") {
-                  var playerStats = {
-                    playerId: player.playerId,
-                    isActive: false,
-                    pos: player.pos,
-                    name: player.name,
-                    playerStats: currTeam,
-                    data: {
-                      usage: {
-                        scoringUsage: 0,
-                        playmakingUsage: 0,
-                        reboundingUsage: 0,
-                      },
-                      games: [],
-                      averages: {},
-                      teamAverages: {},
-                      matchupGames: [],
-                      matchupAverages: {},
-                      gp: 0,
-                      gm: 0,
-                    },
-                  };
-
-                  if (oldRosters.hasOwnProperty(currTeam.teamId)) {
-                    oldRosters[currTeam.teamId].push(playerStats);
-                  } else {
-                    oldRosters[currTeam.teamId] = [playerStats];
-                  }
-                }
-              }
-            }
-          }
-        } else {
-          teams.splice(i, 1);
-          i--;
-        }
-      }
-
-      for (let i = 0; i < leaguePlayers.length; i++) {
-        var player = leaguePlayers[i];
-        if (player.stats.season.length == 0) {
-          leaguePlayers.splice(i, 1);
-          i--;
-        } else if (player.stats.season[0].seasonYear == seasonYear) {
-          for (let j = 0; j < player.stats.season[0].teams.length; j++) {
-            var currTeam = player.stats.season[0].teams[j];
-            var playerStats = {
-              playerId: player._id,
-              isActive: false,
-              pos: player.pos,
-              name: player.name,
-              playerStats: currTeam,
-              data: {
-                usage: {
-                  scoringUsage: 0,
-                  playmakingUsage: 0,
-                  reboundingUsage: 0,
-                },
-                games: [],
-                averages: {},
-                teamAverages: {},
-                matchupGames: [],
-                matchupAverages: {},
-                gp: 0,
-                gm: 0,
-              },
-            };
-            if (oldRosters.hasOwnProperty(currTeam.teamId)) {
-              oldRosters[currTeam.teamId].push(playerStats);
-            } else {
-              oldRosters[currTeam.teamId] = [playerStats];
-            }
-            remainingPlayers.push(playerStats);
-          }
-        }
-      }
-
-      for (let i = 0; i < teams.length; i++) {
-        team = teams[i];
-        if (team.isNBAFranchise) {
-          team.roster = team.roster.concat(
-            oldRosters[team.teamId] === undefined ? [] : oldRosters[team.teamId]
-          );
-        }
-      }
-
-      teams.push({
-        teamId: "0000000001",
-        city: "",
-        fullName: "Gleague / Free Agent",
-        confName: "",
-        tricode: "GFA",
-        divName: "",
-        nickname: "G/FA",
-        urlName: "gfa",
-        gp: 0,
-        gamelog: [],
-        roster: remainingPlayers,
-      });
     })
     .catch((err) => {
       console.error(err);
@@ -378,18 +64,27 @@ async function getTeams(leaguePlayers, seasonYear) {
   return teams;
 }
 
-async function getTeamRoster(url) {
+async function getGame(url) {
+  var game;
+  await axios
+    .get(url)
+    .then((res) => {
+      game = res.data;
+    })
+    .catch((err) => {
+      console.error(err);
+      return err;
+    });
+  return game;
+}
+
+async function getRoster(url) {
   var roster = [];
 
   await axios
     .get(url)
     .then((res) => {
-      roster = res.data.league.standard.players.map((player) => {
-        return {
-          playerId: player.personId,
-          isActive: true,
-        };
-      });
+      roster = res.data.league.standard.players;
     })
     .catch((err) => {
       console.error(err);
@@ -397,40 +92,6 @@ async function getTeamRoster(url) {
     });
   return roster;
 }
-
-async function getPlayers(seasonYear) {
-  var url = getPlayersUrl(seasonYear);
-  var players = [];
-  await axios
-    .get(url)
-    .then(async function (res) {
-      players = res.data.league.standard;
-      console.log(seasonYear);
-
-      console.log(players[0].heightFeet);
-      await addAllSeasonStats(players, seasonYear);
-    })
-    .catch((err) => {
-      console.error(err);
-      return err;
-    });
-  return players;
-}
-
-async function addAllSeasonStats(players, seasonYear) {
-  for (let i = 0; i < players.length; i++) {
-    console.log(players.length - i);
-    players[i].stats = {
-      season: await getSeasonalStats(
-        getPlayerStatsUrl(seasonYear, players[i].personId)
-      ),
-    };
-    players[i].pos = misc.convertPos(players[i].pos);
-  }
-  return players;
-}
-
-// getSeasonalStats(getPlayerStatsUrl("2021", "202699")).catch(console.error);
 
 async function getSeasonalStats(url) {
   var seasonalStats = [];
@@ -440,17 +101,16 @@ async function getSeasonalStats(url) {
       seasonalStats = res.data.league.standard.stats.regularSeason.season;
     })
     .catch((err) => {
-      // console.error(err);
+      console.error(err);
       return [];
     });
   return seasonalStats;
 }
 
 module.exports.getTeams = getTeams;
-module.exports.getUpdatedSchedule = getUpdatedSchedule;
 module.exports.getSchedule = getSchedule;
 module.exports.getPlayers = getPlayers;
 module.exports.getSeasonYear = getSeasonYear;
 module.exports.getSeasonalStats = getSeasonalStats;
-module.exports.getPlayerStatsUrl = getPlayerStatsUrl;
-module.exports.updateStatus = updateStatus;
+module.exports.getGame = getGame;
+module.exports.getRoster = getRoster;

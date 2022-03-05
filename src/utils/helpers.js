@@ -1,5 +1,5 @@
 const calculations = require("./calculations.js");
-const requests = require("./apiRequests.js");
+const processing = require("./processing.js");
 
 function daysOld(dateOfBirth) {
   var year = dateOfBirth.substring(0, 4);
@@ -66,25 +66,6 @@ function playedGame(dateString) {
   return date < currDate;
 }
 
-function assignTeamStats(key, value, mins) {
-  key.pts = parseInt(value.points);
-  key.ast = parseInt(value.assists);
-  key.drb = parseInt(value.defReb);
-  key.orb = parseInt(value.offReb);
-  key.stl = parseInt(value.steals);
-  key.blk = parseInt(value.blocks);
-  key.tov = parseInt(value.turnovers);
-  key.fgm = parseInt(value.fgm);
-  key.fga = parseInt(value.fga);
-  key.tpm = parseInt(value.tpm);
-  key.tpa = parseInt(value.tpa);
-  key.ftm = parseInt(value.ftm);
-  key.fta = parseInt(value.fta);
-  key.mp = mins;
-  key.pf = parseInt(value.pFouls);
-  key.tf = parseInt(value.team_fouls);
-}
-
 function sortStats(stats) {
   stats.sort(function (a, b) {
     var dateA = new Date(a.game.date);
@@ -92,40 +73,6 @@ function sortStats(stats) {
     return dateA - dateB;
   });
   return stats;
-}
-
-function formatGame(game) {
-  cleanedGame = {
-    _id: game.gameId,
-    seasonStageId: game.seasonStageId,
-    gameUrlCode: game.gameUrlCode,
-    statusNum: game.statusNum,
-    extendedStatusNum: game.extendedStatusNum,
-    isStartTimeTBD: game.isStartTimeTBD,
-    startTimeUTC: game.startTimeUTC,
-    startDateEastern: convertDate(game.startDateEastern),
-    isNeutralVenue: game.isNeutralVenue,
-    startTimeEastern: game.startTimeEastern,
-    updateStatus: game.updateStatus,
-    hTeam: {
-      teamId: game.hTeam.teamId,
-      score: parseInt(game.hTeam.score),
-      win: parseInt(game.hTeam.win),
-      loss: parseInt(game.hTeam.loss),
-      gamesPlayed: parseInt(game.hTeam.win) + parseInt(game.hTeam.loss),
-      stats: game.hTeam.stats,
-    },
-    vTeam: {
-      teamId: game.vTeam.teamId,
-      score: parseInt(game.vTeam.score),
-      win: parseInt(game.vTeam.win),
-      loss: parseInt(game.vTeam.loss),
-      gamesPlayed: parseInt(game.vTeam.win) + parseInt(game.vTeam.loss),
-      stats: game.vTeam.stats,
-    },
-  };
-
-  return cleanedGame;
 }
 
 function parseSeasonStats(seasonStats, isTeam) {
@@ -249,6 +196,26 @@ function parseSeasonalStats(seasonalStats) {
   return seasonsPlayed;
 }
 
+function updateQueue(currQueue, newQueue, maxGames) {
+  var currGames = currQueue;
+  var newGames = newQueue;
+  var result = [];
+
+  if (newGames === undefined || newGames.length == 0) {
+    result =
+      currGames.length > maxGames ? currGames.slice(0, maxGames) : currGames;
+  } else if (newGames.length >= maxGames) {
+    result = newGames.slice(0, maxGames);
+  } else if (currGames === undefined || currGames.length == 0) {
+    result = newGames;
+  } else if (currGames.length + newGames.length >= maxGames) {
+    result = newGames.concat(currGames.slice(0, maxGames - newGames.length));
+  } else if (currGames.length + newGames.length <= maxGames) {
+    result = newGames.concat(currGames);
+  }
+  return result;
+}
+
 function formatPlayer(player) {
   var cleanedPlayer = {};
   var seasonsPlayed = [];
@@ -292,6 +259,58 @@ function formatPlayer(player) {
     },
   };
   return cleanedPlayer;
+}
+
+function formatGame(game) {
+  var cleanedGame = {
+    _id: game.gameId,
+    seasonStageId: game.seasonStageId,
+    gameUrlCode: game.gameUrlCode,
+    statusNum: game.statusNum,
+    extendedStatusNum: game.extendedStatusNum,
+    isStartTimeTBD: game.isStartTimeTBD,
+    startTimeUTC: game.startTimeUTC,
+    startDateEastern: convertDate(game.startDateEastern),
+    isNeutralVenue: game.isNeutralVenue,
+    startTimeEastern: game.startTimeEastern,
+    updateStatus: game.updateStatus,
+    hTeam: {
+      teamId: game.hTeam.teamId,
+      score: parseInt(game.hTeam.score),
+      win: parseInt(game.hTeam.win),
+      loss: parseInt(game.hTeam.loss),
+      gamesPlayed: parseInt(game.hTeam.win) + parseInt(game.hTeam.loss),
+      stats: game.hTeam.stats,
+    },
+    vTeam: {
+      teamId: game.vTeam.teamId,
+      score: parseInt(game.vTeam.score),
+      win: parseInt(game.vTeam.win),
+      loss: parseInt(game.vTeam.loss),
+      gamesPlayed: parseInt(game.vTeam.win) + parseInt(game.vTeam.loss),
+      stats: game.vTeam.stats,
+    },
+  };
+
+  return cleanedGame;
+}
+
+function formatTeam(team) {
+  var cleanedTeam = {
+    _id: team.teamId,
+    city: team.city,
+    fullName: team.fullName,
+    confName: team.confName,
+    tricode: team.tricode,
+    divName: team.divName,
+    nickname: team.nickname,
+    urlName: team.urlName,
+    gp: 0,
+    gamelog: [],
+    roster: team.roster,
+  };
+
+  return cleanedTeam;
 }
 
 function formatTeamUpdate(
@@ -366,102 +385,11 @@ function formatScheduleUpdate() {
   return [
     {
       updateMany: {
-        filter: { updateStatus: requests.updateStatus.PENDING },
-        update: { $set: { updateStatus: requests.updateStatus.COMPLETE } },
+        filter: { updateStatus: processing.updateStatus.PENDING },
+        update: { $set: { updateStatus: processing.updateStatus.COMPLETE } },
       },
     },
   ];
-}
-
-function assignPlayerStats(player, minsPlayed) {
-  var playerStats = {
-    playerId: player.personId,
-    pos: player.pos,
-    name: player.firstName + " " + player.lastName,
-    dnp: player.dnp,
-    stats: {
-      pts: parseInt(player.points),
-      ast: parseInt(player.assists),
-      drb: parseInt(player.defReb),
-      orb: parseInt(player.offReb),
-      stl: parseInt(player.steals),
-      blk: parseInt(player.blocks),
-      tov: parseInt(player.turnovers),
-      fgm: parseInt(player.fgm),
-      fga: parseInt(player.fga),
-      fgp: parseFloat(player.fgp),
-      tpm: parseInt(player.tpm),
-      tpa: parseInt(player.tpa),
-      tpp: parseFloat(player.tpp),
-      ftm: parseInt(player.ftm),
-      fta: parseInt(player.fta),
-      ftp: parseFloat(player.ftp),
-      mp: minsPlayed,
-      pf: parseInt(player.pFouls),
-      fp: calculations.playerFantasyPoints(
-        parseInt(player.points),
-        parseInt(player.assists),
-        parseInt(player.defReb) + parseInt(player.offReb),
-        parseInt(player.steals),
-        parseInt(player.blocks),
-        parseInt(player.turnovers)
-      ),
-    },
-  };
-
-  return playerStats;
-}
-
-function queueTest() {
-  var maxGames = 10;
-  var currQueue1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-  var currQueue2 = [1, 2, 4];
-  var currQueue3 = [];
-  var newQueue1 = [10, 11, 13, 14, 15, 16, 17, 12, 14, 15, 16, 17];
-  var newQueue2 = [5, 7, 8];
-  var newQueue3 = [];
-
-  console.log(updateQueue(currQueue1, newQueue1, maxGames));
-  console.log(updateQueue(currQueue2, newQueue1, maxGames));
-  console.log(updateQueue(currQueue3, newQueue1, maxGames));
-  console.log(updateQueue(currQueue1, newQueue2, maxGames));
-  console.log(updateQueue(currQueue2, newQueue2, maxGames));
-  console.log(updateQueue(currQueue3, newQueue2, maxGames));
-  console.log(updateQueue(currQueue1, newQueue3, maxGames));
-  console.log(updateQueue(currQueue2, newQueue3, maxGames));
-  console.log(updateQueue(currQueue3, newQueue3, maxGames));
-}
-
-// queueTest();
-
-function updateQueue(currQueue, newQueue, maxGames) {
-  var currGames = currQueue;
-  var newGames = newQueue;
-  var result = [];
-
-  if (newGames === undefined || newGames.length == 0) {
-    result =
-      currGames.length > maxGames ? currGames.slice(0, maxGames) : currGames;
-  } else if (newGames.length >= maxGames) {
-    result = newGames.slice(0, maxGames);
-  } else if (currGames === undefined || currGames.length == 0) {
-    result = newGames;
-  } else if (currGames.length + newGames.length >= maxGames) {
-    result = newGames.concat(currGames.slice(0, maxGames - newGames.length));
-  } else if (currGames.length + newGames.length <= maxGames) {
-    result = newGames.concat(currGames);
-  }
-  return result;
-}
-
-function convertPos(oldPos) {
-  var oldCharArr = oldPos.split("");
-  var newCharArr = oldCharArr.filter((char) => {
-    return char != "-";
-  });
-  var newPos = newCharArr.join("");
-
-  return newPos;
 }
 
 module.exports.playerAge = playerAge;
@@ -470,13 +398,10 @@ module.exports.currentDate = currentDate;
 module.exports.displayCurrentTime = displayCurrentTime;
 module.exports.playedGame = playedGame;
 module.exports.sortStats = sortStats;
-module.exports.assignTeamStats = assignTeamStats;
-module.exports.formatGame = formatGame;
-module.exports.formatPlayer = formatPlayer;
-module.exports.assignPlayerStats = assignPlayerStats;
 module.exports.updateQueue = updateQueue;
-module.exports.parseSeasonalStats = parseSeasonalStats;
+module.exports.formatPlayer = formatPlayer;
+module.exports.formatGame = formatGame;
+module.exports.formatTeam = formatTeam;
 module.exports.formatTeamUpdate = formatTeamUpdate;
 module.exports.formatGameUpdate = formatGameUpdate;
 module.exports.formatScheduleUpdate = formatScheduleUpdate;
-module.exports.convertPos = convertPos;
