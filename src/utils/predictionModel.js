@@ -1,5 +1,6 @@
 import * as tf from "@tensorflow/tfjs";
 import { lstm } from "@tensorflow/tfjs-layers/dist/exports_layers";
+const mongo = require("./mongo.js");
 
 function generateDataset(size) {
   /*
@@ -15,9 +16,18 @@ function generateDataset(size) {
     prevGameStats: playerBxscr (w/ pos), teamBxscr, mUsg, oppBxscr, *matchup
     currGameStats: didPlay
   }
+
+  rawTrainData = {
+    teams: seasonYear-teams
+    players: seasonYear-players
+  }
   */
 
-  var dataSet = [];
+  var rawTrainData = {};
+
+  for (let seasonYear = 2016; seasonYear < 2019; seasonYear++) {
+    rawTrainData = await mongo.rawTrainData(seasonYear);
+  }
 }
 
 const model = sequential();

@@ -2,11 +2,7 @@ const requests = require("./apiRequests.js");
 const calculations = require("./calculations.js");
 const helpers = require("./helpers.js");
 const endpoints = require("./apiEndpoints.js");
-const updateStatus = {
-  COMPLETE: "complete",
-  NOTREADY: "not ready",
-  PENDING: "pending",
-};
+const constants = require("./constants.js");
 
 async function players(seasonYear) {
   var players = await requests.getPlayers(seasonYear);
@@ -29,7 +25,7 @@ async function schedule(seasonYear, existingGames) {
   var games = await requests.getSchedule(seasonYear);
   var cleanedGames = [];
   for (let i = 0; i < games.length; i++) {
-    games[i].updateStatus = updateStatus.NOTREADY;
+    games[i].updateStatus = constants.updateStatus.NOTREADY;
     if (
       existingGames.filter((game) => {
         return game._id == games[i].gameId;
@@ -49,6 +45,7 @@ async function scheduleUpdates(newGames, players, seasonYear) {
   var cleanedGames = [];
   var gameUpdate;
   var updates = [];
+  var gameDate;
 
   for (let i = 0; i < games.length; i++) {
     if (games[i].gameId == newGames[0].gameId) {
@@ -59,12 +56,18 @@ async function scheduleUpdates(newGames, players, seasonYear) {
 
   for (let i = 0; i < cleanedGames.length; i++) {
     console.log(cleanedGames.length - i);
+    if (cleanedGames[i].startDateEastern == undefined) {
+      gameDate = cleanedGames[i].gameUrlCode.substring(0, 8);
+    } else {
+      gameDate = cleanedGames[i].startDateEastern;
+    }
+
     var gameStats = await game(
-      endpoints.game(cleanedGames[i].startDateEastern, cleanedGames[i].gameId),
+      endpoints.game(gameDate, cleanedGames[i].gameId),
       players
     );
     if (gameStats != null) {
-      cleanedGames[i].updateStatus = updateStatus.PENDING;
+      cleanedGames[i].updateStatus = constants.updateStatus.PENDING;
       cleanedGames[i].hTeam.stats = gameStats.hTeam;
       cleanedGames[i].vTeam.stats = gameStats.vTeam;
 
@@ -114,12 +117,12 @@ async function game(url, players) {
     );
     var hId = game.basicGameData.hTeam.teamId;
 
-    assignTeamStats(
+    helpers.assignTeamStats(
       gameStats.vTeam.team,
       game.stats.vTeam.totals,
       teamMinsPlayed
     );
-    assignTeamStats(
+    helpers.assignTeamStats(
       gameStats.hTeam.team,
       game.stats.hTeam.totals,
       teamMinsPlayed
@@ -134,13 +137,13 @@ async function game(url, players) {
       var playerStats = {};
 
       if (game.stats.activePlayers[i].teamId == hId) {
-        playerStats = assignPlayerStats(
+        playerStats = helpers.assignPlayerStats(
           game.stats.activePlayers[i],
           minsPlayed
         );
         gameStats.hTeam.player.push(playerStats);
       } else {
-        playerStats = assignPlayerStats(
+        playerStats = helpers.assignPlayerStats(
           game.stats.activePlayers[i],
           minsPlayed
         );
@@ -341,64 +344,6 @@ async function teams(leaguePlayers, seasonYear) {
   return cleanedTeams;
 }
 
-function assignPlayerStats(player, minsPlayed) {
-  var playerStats = {
-    playerId: player.personId,
-    pos: player.pos,
-    name: player.firstName + " " + player.lastName,
-    dnp: player.dnp,
-    stats: {
-      pts: parseInt(player.points),
-      ast: parseInt(player.assists),
-      drb: parseInt(player.defReb),
-      orb: parseInt(player.offReb),
-      stl: parseInt(player.steals),
-      blk: parseInt(player.blocks),
-      tov: parseInt(player.turnovers),
-      fgm: parseInt(player.fgm),
-      fga: parseInt(player.fga),
-      fgp: parseFloat(player.fgp),
-      tpm: parseInt(player.tpm),
-      tpa: parseInt(player.tpa),
-      tpp: parseFloat(player.tpp),
-      ftm: parseInt(player.ftm),
-      fta: parseInt(player.fta),
-      ftp: parseFloat(player.ftp),
-      mp: minsPlayed,
-      pf: parseInt(player.pFouls),
-      fp: calculations.playerFantasyPoints(
-        parseInt(player.points),
-        parseInt(player.assists),
-        parseInt(player.defReb) + parseInt(player.offReb),
-        parseInt(player.steals),
-        parseInt(player.blocks),
-        parseInt(player.turnovers)
-      ),
-    },
-  };
-
-  return playerStats;
-}
-
-function assignTeamStats(key, value, mins) {
-  key.pts = parseInt(value.points);
-  key.ast = parseInt(value.assists);
-  key.drb = parseInt(value.defReb);
-  key.orb = parseInt(value.offReb);
-  key.stl = parseInt(value.steals);
-  key.blk = parseInt(value.blocks);
-  key.tov = parseInt(value.turnovers);
-  key.fgm = parseInt(value.fgm);
-  key.fga = parseInt(value.fga);
-  key.tpm = parseInt(value.tpm);
-  key.tpa = parseInt(value.tpa);
-  key.ftm = parseInt(value.ftm);
-  key.fta = parseInt(value.fta);
-  key.mp = mins;
-  key.pf = parseInt(value.pFouls);
-  key.tf = parseInt(value.team_fouls);
-}
-
 function positions(gamePlayers, leaguePlayers) {
   var leaguePlayer;
   var playerPos;
@@ -431,4 +376,3 @@ module.exports.players = players;
 module.exports.scheduleUpdates = scheduleUpdates;
 module.exports.schedule = schedule;
 module.exports.teams = teams;
-module.exports.updateStatus = updateStatus;

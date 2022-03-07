@@ -27,7 +27,7 @@ function players(seasonYear) {
 }
 
 function teams(seasonYear) {
-  return "http://data.nba.net/10s/prod/v2/" + seasonYear + "/teams.json";
+  return "http://data.nba.net/10s/prod/v1/" + seasonYear + "/teams.json";
 }
 
 function roster(seasonYear, teamUrlName) {

@@ -1,83 +1,17 @@
 const requests = require("./apiRequests.js");
-const misc = require("./helpers.js");
+const helpers = require("./helpers.js");
 const calculations = require("./calculations.js");
 const { MongoClient } = require("mongodb");
 const config = require("../../config.json");
 const processing = require("./processing.js");
-
-const statType = {
-  PLAYER: "player",
-  TEAM: "team",
-  OPPONENT: "opponent",
-};
-
-const usageType = {
-  SCORING: "scoringUsage",
-  PLAYMAKING: "playmakingUsage",
-  REBOUNDING: "reboundingUsage",
-};
-
-const positions = {
-  GUARD: "G",
-  GUARDFORWARD: "GF",
-  FORWARDGUARD: "F",
-  FORWARD: "F",
-  FORWARDCENTER: "FC",
-  CENTERFORWARD: "CF",
-  CENTER: "C",
-};
-
-const database = {
-  CURRENT: "currentSeason",
-  HISTORICAL: "nbaFantasyLineup",
-};
-
-const historicalCollection = {
-  2016: {
-    PLAYERS: "2017-players",
-    SCHEDULE: "2017-schedule",
-    LEAGUE: "2017-league",
-    TEAMS: "2017-teams",
-  },
-  2017: {
-    PLAYERS: "2017-players",
-    SCHEDULE: "2017-schedule",
-    LEAGUE: "2017-league",
-    TEAMS: "2017-teams",
-  },
-  2018: {
-    PLAYERS: "2018-players",
-    SCHEDULE: "2018-schedule",
-    LEAGUE: "2018-league",
-    TEAMS: "2018-teams",
-  },
-  2019: {
-    PLAYERS: "2019-players",
-    SCHEDULE: "2019-schedule",
-    LEAGUE: "2019-league",
-    TEAMS: "2019-teams",
-  },
-  2020: {
-    PLAYERS: "2020-players",
-    SCHEDULE: "2020-schedule",
-    LEAGUE: "2020-league",
-    TEAMS: "2020-teams",
-  },
-};
-
-const currentCollection = {
-  PLAYERS: "players",
-  SCHEDULE: "schedule",
-  LEAGUE: "league",
-  TEAMS: "teams",
-};
+const constants = require("./constants.js");
 
 async function mongoClient() {
   const MONGO_CONNECTION_STRING = config.MONGO_CONNECTION_STRING;
   const uri =
     "mongodb+srv://adamvalenti:" +
     MONGO_CONNECTION_STRING +
-    "@adam.ogm6r.mongodb.net/nbaFantasyLineup?retryWrites=true&w=majority";
+    "@adam.ogm6r.mongodb.net/CURRENT?retryWrites=true&w=majority";
 
   var client = new MongoClient(uri);
   return client;
@@ -93,12 +27,12 @@ async function main() {
 
     // await removeCollection(
     //   client,
-    //   database.NBAFANTASYLINEUP,
+    //   constants.database.CURRENT,
     //   collections[2021].TEAMS
     // );
     // await removeCollection(
     //   client,
-    //   database.NBAFANTASYLINEUP,
+    //   constants.database.CURRENT,
     //   collections[2021].SCHEDULE,
     //   { seasonStageId: 2 }
     // );
@@ -107,16 +41,20 @@ async function main() {
 
     var seasonYear = await requests.getSeasonYear();
 
-    // misc.displayCurrentTime();
+    // helpers.displayCurrentTime();
     // await createPlayers(client, await requests.getPlayers(seasonYear));
-    var players = await pullCollection(client, collections[2021].PLAYERS);
+    var players = await pullCollection(
+      client,
+      constants.database.CURRENT,
+      constants.currentCollection[2021].PLAYERS
+    );
 
-    // misc.displayCurrentTime();
+    // helpers.displayCurrentTime();
     // await createTeams(client, await requests.getTeams(players, seasonYear));
-    // misc.displayCurrentTime();
+    // helpers.displayCurrentTime();
     // await createGames(client, await requests.getSchedule(seasonYear));
 
-    misc.displayCurrentTime();
+    helpers.displayCurrentTime();
     await updateGames(
       client,
       await requests.getUpdatedSchedule(
@@ -126,8 +64,8 @@ async function main() {
       )
     );
 
-    misc.displayCurrentTime();
-    await updateNewGames(client);
+    helpers.displayCurrentTime();
+    await addGamesToTeams(client);
 
     // research atlas search and search index for improved database retrieval
     // research mongodb charts for player stat graphs
@@ -136,231 +74,149 @@ async function main() {
   } catch (error) {
     console.error(error);
   } finally {
-    misc.displayCurrentTime();
+    helpers.displayCurrentTime();
     await client.close();
   }
 }
 
-async function getData() {
+async function getModelData() {
+  var currYear = await requests.getSeasonYear();
+  for (let seasonYear = 2015; seasonYear < currYear; seasonYear++) {
+    try {
+      await getData(seasonYear);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+}
+
+async function getData(seasonYear) {
   const client = await mongoClient();
-  const seasonYear = (await requests.getSeasonYear()) - 3;
-  misc.displayCurrentTime();
+  // const seasonYear = (await requests.getSeasonYear()) - 3;
+
+  helpers.displayCurrentTime();
   try {
     await client.connect();
 
-    // await removeCollection(
-    //   client,
-    //   database.NBAFANTASYLINEUP,
-    //   historicalCollection[seasonYear].PLAYERS
-    // );
+    await removeCollection(
+      client,
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].PLAYERS
+    );
 
-    // await removeCollection(
-    //   client,
-    //   database.NBAFANTASYLINEUP,
-    //   historicalCollection[seasonYear].SCHEDULE
-    // );
+    await removeCollection(
+      client,
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].SCHEDULE
+    );
 
-    // await removeCollection(
-    //   client,
-    //   database.NBAFANTASYLINEUP,
-    //   historicalCollection[seasonYear].TEAMS
-    // );
+    await removeCollection(
+      client,
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].TEAMS
+    );
 
-    // await createPlayers(
-    //   client,
-    //   await processing.players(seasonYear),
-    //   database.NBAFANTASYLINEUP,
-    //   historicalCollection[seasonYear].PLAYERS
-    // );
+    await createPlayers(
+      client,
+      await processing.players(seasonYear),
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].PLAYERS
+    );
 
     const players = await pullCollection(
       client,
-      historicalCollection[seasonYear].PLAYERS
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].PLAYERS
     );
 
-    // await createGames(
-    //   client,
-    //   await processing.schedule(
-    //     seasonYear,
-    //     await pullCollection(client, historicalCollection[seasonYear].SCHEDULE)
-    //   ),
-    //   database.NBAFANTASYLINEUP,
-    //   historicalCollection[seasonYear].SCHEDULE
-    // );
+    var games = await processing.schedule(
+      seasonYear,
+      await pullCollection(
+        client,
+        constants.database.HISTORICAL,
+        constants.historicalCollection[seasonYear].SCHEDULE
+      )
+    );
 
-    // await createTeams(
-    //   client,
-    //   await processing.teams(players, seasonYear),
-    //   database.NBAFANTASYLINEUP,
-    //   historicalCollection[seasonYear].TEAMS
-    // );
-
-    // misc.displayCurrentTime();
-
-    // await sendUpdates(
-    //   client,
-    //   historicalCollection[seasonYear].SCHEDULE,
-    //   await processing.scheduleUpdates(
-    //     gamesToBeUpdated(
-    //       await toBeUpdated(
-    //         client,
-    //         database.NBAFANTASYLINEUP,
-    //         historicalCollection[seasonYear].SCHEDULE
-    //       )
-    //     ),
-    //     players,
-    //     seasonYear
-    //   )
-    // );
-
-    misc.displayCurrentTime();
-    await updateNewGames(
+    await createGames(
       client,
-      historicalCollection[seasonYear].SCHEDULE,
-      historicalCollection[seasonYear].TEAMS,
-      historicalCollection[seasonYear].PLAYERS,
+      games,
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].SCHEDULE
+    );
+
+    await createTeams(
+      client,
+      await processing.teams(players, seasonYear),
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].TEAMS
+    );
+
+    helpers.displayCurrentTime();
+
+    await sendUpdates(
+      client,
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].SCHEDULE,
+      await processing.scheduleUpdates(
+        gamesToBeUpdated(
+          await toBeUpdated(
+            client,
+            constants.database.HISTORICAL,
+            constants.historicalCollection[seasonYear].SCHEDULE
+          )
+        ),
+        players,
+        seasonYear
+      )
+    );
+
+    helpers.displayCurrentTime();
+    await addGamesToTeams(
+      client,
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].SCHEDULE,
+      constants.historicalCollection[seasonYear].TEAMS,
+      constants.historicalCollection[seasonYear].PLAYERS,
       seasonYear
     );
   } catch (error) {
     console.error(error);
   } finally {
-    misc.displayCurrentTime();
+    helpers.displayCurrentTime();
     await client.close();
   }
 }
 
-getData().catch(console.error);
+getModelData().catch(console.error);
 
 // main().catch(console.error);
 
-function filterPlayers(players) {
-  var teamPlayers = players
-    .filter((player) => {
-      return player.stats.mp > 0;
-    })
-    .map((player) => {
-      return {
-        playerId: player.playerId,
-        name: player.name,
-        pos: player.pos,
-        dnp: player.dnp,
-        stats: {
-          pts: player.stats.pts,
-          ast: player.stats.ast,
-          drb: player.stats.drb,
-          orb: player.stats.orb,
-          stl: player.stats.stl,
-          blk: player.stats.blk,
-          tov: player.stats.tov,
-          fgm: player.stats.fgm,
-          fga: player.stats.fga,
-          tpm: player.stats.tpm,
-          tpa: player.stats.tpa,
-          ftm: player.stats.ftm,
-          fta: player.stats.fta,
-          mp: player.stats.mp,
-          pf: player.stats.pf,
-          fp: player.stats.fp,
-        },
-        matchup: player.matchup,
-      };
-    });
-  return teamPlayers;
-}
-
-async function pullCollection(client, collection, filter = {}) {
-  var items = await client
-    .db(database.NBAFANTASYLINEUP)
-    .collection(collection)
-    .find(filter)
-    .toArray();
+async function pullCollection(client, db, collection, filter = {}) {
+  var items = await client.db(db).collection(collection).find(filter).toArray();
   return items;
 }
 
-function filterGames(games) {
-  var cleanedGames;
-  var cleanedGame;
-  var hTeamPlayers;
-  var vTeamPlayers;
-
-  cleanedGames = games.map((game) => {
-    hTeamPlayers = filterPlayers(game.hTeam.stats.player);
-    vTeamPlayers = filterPlayers(game.vTeam.stats.player);
-
-    cleanedGame = {
-      hTeam: {
-        gameId: game._id,
-        teamId: game.hTeam.teamId,
-        teamStats: game.hTeam.stats.team,
-        activePlayers: hTeamPlayers,
-      },
-      vTeam: {
-        gameId: game._id,
-        teamId: game.vTeam.teamId,
-        teamStats: game.vTeam.stats.team,
-        activePlayers: vTeamPlayers,
-      },
-    };
-    return cleanedGame;
-  });
-
-  return cleanedGames;
-}
-
-function sortGamesByTeam(games) {
-  var sortedGames = {};
-
-  for (let i = 0; i < games.length; i++) {
-    if (sortedGames.hasOwnProperty(games[i].hTeam.teamId)) {
-      sortedGames[games[i].hTeam.teamId].push({
-        team: games[i].hTeam,
-        opponent: games[i].vTeam,
-      });
-    } else {
-      sortedGames[games[i].hTeam.teamId] = [
-        {
-          team: games[i].hTeam,
-          opponent: games[i].vTeam,
-        },
-      ];
-    }
-
-    if (sortedGames.hasOwnProperty(games[i].vTeam.teamId)) {
-      sortedGames[games[i].vTeam.teamId].push({
-        team: games[i].vTeam,
-        opponent: games[i].hTeam,
-      });
-    } else {
-      sortedGames[games[i].vTeam.teamId] = [
-        {
-          team: games[i].vTeam,
-          opponent: games[i].hTeam,
-        },
-      ];
-    }
-  }
-
-  return sortedGames;
-}
-
-async function updateNewGames(
+async function addGamesToTeams(
   client,
+  db,
   scheduleCollection,
   teamsCollection,
-  playerCollection,
+  playersCollection,
   seasonYear
 ) {
   var gameFilter = {
-    updateStatus: processing.updateStatus.PENDING,
+    updateStatus: constants.updateStatus.PENDING,
     seasonStageId: 002,
   };
   var playedGames = await pullCollection(
     client,
+    db,
     scheduleCollection,
     gameFilter
   );
-  var cleanedGames = filterGames(playedGames);
-  var sortedGames = sortGamesByTeam(cleanedGames);
+  var cleanedGames = helpers.filterGames(playedGames);
+  var sortedGames = helpers.sortGamesByTeam(cleanedGames);
 
   console.log("Games Sorted");
 
@@ -370,9 +226,7 @@ async function updateNewGames(
   var team;
   var player;
   var newPlayerGames = [];
-  var newGamesTeamStats = [];
   var usagePercentages;
-  var missingUsage;
   var updates = [];
 
   var teamAverages = {
@@ -381,6 +235,11 @@ async function updateNewGames(
     curr: {},
   };
   var playerTeamAverages = {
+    old: {},
+    new: {},
+    curr: {},
+  };
+  var matchupAverages = {
     old: {},
     new: {},
     curr: {},
@@ -405,10 +264,8 @@ async function updateNewGames(
     new: [],
     curr: [],
   };
-  var matchupAverages = {
-    old: {},
-    new: {},
-    curr: {},
+  var teamGameStats = {
+    new: [],
   };
   var matchupGameStats = {
     old: [],
@@ -421,7 +278,7 @@ async function updateNewGames(
     curr: [],
   };
 
-  var teams = await pullCollection(client, teamsCollection);
+  var teams = await pullCollection(client, db, teamsCollection);
 
   for (let i = 0; i < teams.length; i++) {
     team = teams[i];
@@ -429,9 +286,11 @@ async function updateNewGames(
     var teamData = [];
     var teamUpdate;
     var scheduleUpdate;
-    var scoringUsageRankings = [];
-    var playmakingUsageRankings = [];
-    var reboundingUsageRankings = [];
+    var usageRankings = {
+      scoring: [],
+      playmaking: [],
+      rebounding: [],
+    };
 
     if (sortedGames.hasOwnProperty(team._id)) {
       roster = team.roster;
@@ -441,7 +300,6 @@ async function updateNewGames(
         seasonYear
       );
       missingPlayers.push(...missingRoster);
-      console.log(missingPlayers);
       roster.push(...missingRoster);
 
       teamGamesPlayed.old = team.gp;
@@ -469,100 +327,36 @@ async function updateNewGames(
         playerGamesPlayed.new = newPlayerGames.length;
 
         if (playerGamesPlayed.new > 0) {
-          newGamesTeamStats = newPlayerGames.map((game) => {
-            return game.team.teamStats;
-          });
-
-          playerGameStats.new = newPlayerGames.map((game) => {
-            return game.team.activePlayers
-              .filter((teamPlayer) => {
-                return teamPlayer.playerId == player.playerId;
-              })
-              .map((gamePlayer) => {
-                return gamePlayer.stats;
-              })[0];
-          });
-
-          matchupGameStats.new = newPlayerGames.map((game) => {
-            return game.team.activePlayers
-              .filter((teamPlayer) => {
-                return (
-                  teamPlayer.playerId == player.playerId &&
-                  teamPlayer.matchup != {}
-                );
-              })
-              .map((gamePlayer) => {
-                return gamePlayer.matchup;
-              })[0];
-          });
-
-          playerGamesPlayed.curr =
-            playerGamesPlayed.old + playerGamesPlayed.new;
-
-          playerGameStats.curr = playerGameStats.old.concat(
-            playerGameStats.new
+          helpers.assignNewPlayerGameStats(
+            player,
+            newPlayerGames,
+            playerGamesPlayed,
+            matchupGamesPlayed,
+            playerGameStats,
+            matchupGameStats,
+            teamGameStats
           );
 
-          matchupGamesPlayed.new = matchupGameStats.new.length;
-          matchupGamesPlayed.curr =
-            matchupGamesPlayed.old + matchupGamesPlayed.new;
-          matchupGameStats.curr = matchupGameStats.old.concat(
-            matchupGameStats.new
-          );
-
-          teamAverages.new = calculations.newAverages(newGamesTeamStats);
+          teamAverages.new = calculations.newAverages(teamGameStats.new);
           playerTeamAverages.new = calculations.newAverages(
             playerGameStats.new
           );
 
-          if (matchupGamesPlayed.new == 0) {
-            matchupAverages.curr = matchupAverages.old;
-          } else {
-            matchupAverages.new = calculations.newAverages(
-              matchupGameStats.new
-            );
-            if (matchupGamesPlayed.old == 0) {
-              matchupAverages.curr = matchupAverages.new;
-            } else {
-              matchupAverages.curr = calculations.currAverages(
-                matchupAverages.old,
-                matchupAverages.new,
-                matchupGamesPlayed.old,
-                matchupGamesPlayed.new,
-                matchupGamesPlayed.curr
-              );
-            }
-          }
-
-          if (playerGamesPlayed.new == 0) {
-            teamAverages.curr = teamAverages.old;
-            playerTeamAverages.curr = playerTeamAverages.old;
-          } else {
-            teamAverages.new = calculations.newAverages(newGamesTeamStats);
-            playerTeamAverages.new = calculations.newAverages(
-              playerGameStats.new
-            );
-
-            if (playerGamesPlayed.old == 0) {
-              teamAverages.curr = teamAverages.new;
-              playerTeamAverages.curr = playerTeamAverages.new;
-            } else {
-              teamAverages.curr = calculations.currAverages(
-                teamAverages.old,
-                teamAverages.new,
-                playerGamesPlayed.old,
-                playerGamesPlayed.new,
-                playerGamesPlayed.curr
-              );
-              playerTeamAverages.curr = calculations.currAverages(
-                playerTeamAverages.old,
-                playerTeamAverages.new,
-                playerGamesPlayed.old,
-                playerGamesPlayed.new,
-                playerGamesPlayed.curr
-              );
-            }
-          }
+          helpers.assignNewAverages(
+            matchupGamesPlayed,
+            matchupAverages,
+            matchupGameStats
+          );
+          helpers.assignNewAverages(
+            playerGamesPlayed,
+            teamAverages,
+            teamGameStats
+          );
+          helpers.assignNewAverages(
+            playerGamesPlayed,
+            playerTeamAverages,
+            playerGameStats
+          );
 
           usagePercentages = calculations.usagePercentages(
             playerTeamAverages.curr,
@@ -570,7 +364,6 @@ async function updateNewGames(
             playerGamesPlayed.curr,
             teamGamesPlayed.curr
           );
-
           playerData = {
             usage: usagePercentages,
             games: playerGameStats.curr,
@@ -589,27 +382,27 @@ async function updateNewGames(
           };
           playerData = {
             usage: usagePercentages,
-            games: player.data.games,
-            averages: player.data.averages,
-            teamAverages: player.data.teamAverages,
-            matchupGames: player.data.matchupGames,
-            matchupAverages: player.data.matchupAverages,
+            games: playerGameStats.old,
+            averages: playerTeamAverages.old,
+            teamAverages: teamAverages.old,
+            matchupGames: matchupGameStats.old,
+            matchupAverages: matchupAverages.old,
             gp: playerGamesPlayed.old,
-            gm: player.data.gm,
+            gm: teamGamesPlayed.curr - playerGamesPlayed.old,
           };
         }
 
-        scoringUsageRankings.push({
+        usageRankings.scoring.push({
           playerId: player.playerId,
           name: player.name,
           scoringUsage: usagePercentages.scoringUsage,
         });
-        playmakingUsageRankings.push({
+        usageRankings.playmaking.push({
           playerId: player.playerId,
           name: player.name,
           playmakingUsage: usagePercentages.playmakingUsage,
         });
-        reboundingUsageRankings.push({
+        usageRankings.rebounding.push({
           playerId: player.playerId,
           name: player.name,
           reboundingUsage: usagePercentages.reboundingUsage,
@@ -617,297 +410,53 @@ async function updateNewGames(
 
         teamData.push(playerData);
       }
-
-      scoringUsageRankings = calculations.usageRankings(
-        scoringUsageRankings,
-        usageType.SCORING
-      );
-
-      playmakingUsageRankings = calculations.usageRankings(
-        playmakingUsageRankings,
-        usageType.PLAYMAKING
-      );
-
-      reboundingUsageRankings = calculations.usageRankings(
-        reboundingUsageRankings,
-        usageType.REBOUNDING
-      );
-
       gamelog.old = team.gamelog;
 
-      if (gamelog.old.length != 0) {
-        gamelog.old = gamelog.old.map((game) => {
-          missingUsage = {
-            all: {
-              scoring: 0,
-              playmaking: 0,
-              rebounding: 0,
-            },
-            G: {
-              scoring: 0,
-              playmaking: 0,
-              rebounding: 0,
-            },
-            GF: {
-              scoring: 0,
-              playmaking: 0,
-              rebounding: 0,
-            },
-            FG: {
-              scoring: 0,
-              playmaking: 0,
-              rebounding: 0,
-            },
-            F: {
-              scoring: 0,
-              playmaking: 0,
-              rebounding: 0,
-            },
-            FC: {
-              scoring: 0,
-              playmaking: 0,
-              rebounding: 0,
-            },
-            CF: {
-              scoring: 0,
-              playmaking: 0,
-              rebounding: 0,
-            },
-            C: {
-              scoring: 0,
-              playmaking: 0,
-              rebounding: 0,
-            },
-          };
-          var inactivePlayers = game.inactivePlayers.map((inactivePlayer) => {
-            return {
-              playerId: inactivePlayer.playerId,
-              name: inactivePlayer.name,
-              pos: inactivePlayer.pos,
-              usageAverage: {
-                scoring: scoringUsageRankings
-                  .filter((player) => {
-                    return player.playerId == inactivePlayer.playerId;
-                  })
-                  .map((player) => {
-                    return player.scoringUsage;
-                  })[0],
-                playmaking: playmakingUsageRankings
-                  .filter((player) => {
-                    return player.playerId == inactivePlayer.playerId;
-                  })
-                  .map((player) => {
-                    return player.playmakingUsage;
-                  })[0],
-                rebounding: reboundingUsageRankings
-                  .filter((player) => {
-                    return player.playerId == inactivePlayer.playerId;
-                  })
-                  .map((player) => {
-                    return player.reboundingUsage;
-                  })[0],
-              },
-            };
-          });
+      helpers.updateGamelog(usageRankings, gamelog, sortedGames, team, roster);
 
-          for (let j = 0; j < inactivePlayers.length; j++) {
-            for (var usage in missingUsage.all) {
-              missingUsage.all[usage] += inactivePlayers[j].usageAverage[usage];
-            }
-            if (inactivePlayers[j].pos != "") {
-              for (var usage in missingUsage[inactivePlayers[j].pos]) {
-                missingUsage[inactivePlayers[j].pos][usage] +=
-                  inactivePlayers[j].usageAverage[usage];
-              }
-            }
-          }
-
-          return {
-            gameId: game.gameId,
-            teamStats: game.teamStats,
-            activePlayers: game.activePlayers,
-            inactivePlayers: inactivePlayers,
-            missingUsage: missingUsage,
-            opponentId: game.opponentId,
-            opponentStats: game.opponentStats,
-          };
-        });
-      }
-
-      //dnp filters players initially so if player is an inactive player, can't access dnp prop
-
-      gamelog.new = sortedGames[team._id].map((game) => {
-        missingUsage = {
-          all: {
-            scoring: 0,
-            playmaking: 0,
-            rebounding: 0,
-          },
-          G: {
-            scoring: 0,
-            playmaking: 0,
-            rebounding: 0,
-          },
-          GF: {
-            scoring: 0,
-            playmaking: 0,
-            rebounding: 0,
-          },
-          FG: {
-            scoring: 0,
-            playmaking: 0,
-            rebounding: 0,
-          },
-          F: {
-            scoring: 0,
-            playmaking: 0,
-            rebounding: 0,
-          },
-          FC: {
-            scoring: 0,
-            playmaking: 0,
-            rebounding: 0,
-          },
-          CF: {
-            scoring: 0,
-            playmaking: 0,
-            rebounding: 0,
-          },
-          C: {
-            scoring: 0,
-            playmaking: 0,
-            rebounding: 0,
-          },
-        };
-        var inactivePlayers = roster
-          .filter((rosterPlayer) => {
-            return (
-              game.team.activePlayers.filter((gamePlayer) => {
-                return gamePlayer.playerId == rosterPlayer.playerId;
-              }).length == 0
-            );
-          })
-          .map((inactivePlayer) => {
-            return {
-              playerId: inactivePlayer.playerId,
-              name: inactivePlayer.name,
-              pos: inactivePlayer.pos,
-              usageAverage: {
-                scoring: scoringUsageRankings
-                  .filter((player) => {
-                    return player.playerId == inactivePlayer.playerId;
-                  })
-                  .map((player) => {
-                    return player.scoringUsage;
-                  })[0],
-                playmaking: playmakingUsageRankings
-                  .filter((player) => {
-                    return player.playerId == inactivePlayer.playerId;
-                  })
-                  .map((player) => {
-                    return player.playmakingUsage;
-                  })[0],
-                rebounding: reboundingUsageRankings
-                  .filter((player) => {
-                    return player.playerId == inactivePlayer.playerId;
-                  })
-                  .map((player) => {
-                    return player.reboundingUsage;
-                  })[0],
-              },
-            };
-          });
-
-        for (let j = 0; j < inactivePlayers.length; j++) {
-          for (var usage in missingUsage.all) {
-            missingUsage.all[usage] += inactivePlayers[j].usageAverage[usage];
-          }
-          if (inactivePlayers[j].pos != "") {
-            for (var usage in missingUsage[inactivePlayers[j].pos]) {
-              missingUsage[inactivePlayers[j].pos][usage] +=
-                inactivePlayers[j].usageAverage[usage];
-            }
-          }
-        }
-
-        return {
-          gameId: game.team.gameId,
-          teamStats: game.team.teamStats,
-          activePlayers: game.team.activePlayers,
-          inactivePlayers: inactivePlayers,
-          missingUsage: missingUsage,
-          opponentId: game.opponent.teamId,
-          opponentStats: game.opponent.teamStats,
-        };
-      });
-      gamelog.curr = gamelog.old.concat(gamelog.new);
-
-      teamUpdate = misc.formatTeamUpdate(
+      teamUpdate = helpers.formatTeamUpdate(
         team._id,
         teamData,
         roster,
         teamGamesPlayed.curr,
-        scoringUsageRankings,
-        playmakingUsageRankings,
-        reboundingUsageRankings,
+        usageRankings,
         gamelog.curr
       );
 
       updates.push(teamUpdate);
     }
   }
-  scheduleUpdate = misc.formatScheduleUpdate();
 
-  await sendUpdates(client, teamsCollection, updates);
-  await sendUpdates(client, scheduleCollection, scheduleUpdate);
+  scheduleUpdate = helpers.formatScheduleUpdate();
 
-  if (missingPlayers.length != 0) {
-    missingPlayers = missingPlayers.map((player) => {
-      return {
-        _id: player.playerId,
-        name: player.name,
-        teamId:
-          player.seasonalStats[0] != undefined
-            ? player.seasonalStats[0].teams[0].teamId
-            : "",
-        pos: player.pos,
-        dateOfBirthUTC: "",
-        daysOld: "",
-        yearsPro: 0,
-        country: "",
-        stats: {
-          season: player.seasonalStats,
-          recent: {
-            playedGames: [],
-            missedGames: [],
-            differential: {
-              last3: {},
-              last5: {},
-              last7: {},
-              last10: {},
-            },
-            advanced: {
-              last3: {},
-              last5: {},
-              last7: {},
-              last10: {},
-            },
-            deviation: {},
-          },
-        },
-      };
-    });
+  await sendUpdates(client, db, teamsCollection, updates);
+  await sendUpdates(client, db, scheduleCollection, scheduleUpdate);
 
-    const result = await client
-      .db(database.NBAFANTASYLINEUP)
-      .collection(playerCollection)
-      .insertMany(missingPlayers);
+  missingPlayers = helpers.formatMissingPlayers(missingPlayers);
 
-    if (Object.keys(result.insertedIds).length == missingPlayers.length) {
-      console.log(missingPlayers.length + " players created");
-    } else {
-      console.log("Error occcured during player creation");
-    }
+  await createPlayers(client, missingPlayers, db, playersCollection);
+}
+
+async function rawTrainData(seasonYear) {
+  const client = await mongoClient();
+  var rawTrainData = {};
+  try {
+    await client.connect();
+    rawTrainData.teams = await pullCollection(
+      client,
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].TEAMS
+    );
+    rawTrainData.players = await pullCollection(
+      client,
+      constants.database.HISTORICAL,
+      constants.historicalCollection[seasonYear].PLAYERS
+    );
+  } catch (error) {
+    console.err(error);
+  } finally {
+    await client.close();
+    return rawTrainData;
   }
 }
 
@@ -925,14 +474,14 @@ async function testUsages() {
 
 async function createCollections(client) {
   try {
-    misc.displayCurrentTime();
+    helpers.displayCurrentTime();
     // await addGames(client, await requests.getSchedule());
-    // misc.displayCurrentTime();
+    // helpers.displayCurrentTime();
     // await createPlayers(client, await requests.getPlayers(seasonYear));
-    // misc.displayCurrentTime();
+    // helpers.displayCurrentTime();
     // await addLeague(client);
     await createTeams(client, await requests.getTeams());
-    // misc.displayCurrentTime();
+    // helpers.displayCurrentTime();
   } catch (error) {
     console.error(error);
   }
@@ -944,7 +493,7 @@ async function updateCollections(client) {
       gamesToBeUpdated(await toBeUpdated(client))
     );
     console.log("Schedule Retrieved");
-    misc.displayCurrentTime();
+    helpers.displayCurrentTime();
 
     await updateGames(client, games);
 
@@ -954,10 +503,10 @@ async function updateCollections(client) {
     //   await teamsToBeUpdated(games)
     // );
 
-    misc.displayCurrentTime();
+    helpers.displayCurrentTime();
 
     // await updateLeague(client);
-    // misc.displayCurrentTime();
+    // helpers.displayCurrentTime();
   } catch (error) {
     console.error(error);
   }
@@ -982,21 +531,21 @@ async function addLeague(client) {
     },
     {
       _id: "1",
-      name: positions.GUARD,
+      name: constants.positions.GUARD,
       averages: {},
       deviation: {},
       sampleSize: {},
     },
     {
       _id: "2",
-      name: positions.FORWARD,
+      name: constants.positions.FORWARD,
       averages: {},
       deviation: {},
       sampleSize: {},
     },
     {
       _id: "3",
-      name: positions.CENTER,
+      name: constants.positions.CENTER,
       averages: {},
       deviation: {},
       sampleSize: {},
@@ -1011,7 +560,7 @@ async function addLeague(client) {
   ];
 
   await client
-    .db(database.NBAFANTASYLINEUP)
+    .db(constants.database.CURRENT)
     .collection(collections[2021].LEAGUE)
     .InsertMany(emptyLeagues, (error) => {
       if (error) {
@@ -1049,7 +598,7 @@ async function updateLeague(client) {
   var player = {};
 
   const cursor = await client
-    .db(database.NBAFANTASYLINEUP)
+    .db(constants.database.CURRENT)
     .collection(collections[2021].PLAYERS)
     .find();
 
@@ -1068,11 +617,11 @@ async function updateLeague(client) {
       games.all.push(result.stats.recent.playedGames);
       games.all.push(result);
 
-      if (result.pos == positions.GUARD) {
+      if (result.pos == constants.positions.GUARD) {
         players.guards[result._id] = player;
-      } else if (result.pos == positions.FORWARD) {
+      } else if (result.pos == constants.positions.FORWARD) {
         players.forwards[result._id] = player;
-      } else if (result.pos == positions.CENTER) {
+      } else if (result.pos == constants.positions.CENTER) {
         players.centers[result._id] = player;
       }
       if (result.stats.season[0].perGame.mp > 15) {
@@ -1089,18 +638,18 @@ async function updateLeague(client) {
 
 async function toBeUpdated(
   client,
-  db = database.NBAFANTASYLINEUP,
-  collection = collections[2021].SCHEDULE
+  db = constants.database.CURRENT,
+  collection = constants.currentCollection.SCHEDULE
 ) {
   var results = [];
   try {
-    var currDate = misc.currentDate();
+    var currDate = helpers.currentDate();
 
     results = await client
       .db(db)
       .collection(collection)
       .find({
-        updateStatus: processing.updateStatus.NOTREADY,
+        updateStatus: constants.updateStatus.NOTREADY,
         startDateEastern: { $lt: currDate },
       })
       // .limit(200)
@@ -1294,9 +843,9 @@ function gamesToBeUpdated(results) {
   return games;
 }
 
-async function sendUpdates(client, collection, updates) {
+async function sendUpdates(client, db, collection, updates) {
   const bulkWriteResult = await client
-    .db(database.NBAFANTASYLINEUP)
+    .db(db)
     .collection(collection)
     .bulkWrite(updates);
 
@@ -1316,16 +865,16 @@ async function updateGame(client, game) {
   };
 
   await client
-    .db(database.NBAFANTASYLINEUP)
-    .collection(collections[2021].SCHEDULE)
+    .db(constants.database.CURRENT)
+    .collection(constants.currentCollection.SCHEDULE)
     .updateOne(query, update);
 }
 
 async function createGames(
   client,
   games,
-  db = database.NBAFANTASYLINEUP,
-  collection = collections[2021].SCHEDULE
+  db = constants.database.CURRENT,
+  collection = constants.currentCollection.SCHEDULE
 ) {
   const result = await client.db(db).collection(collection).insertMany(games);
 
@@ -1339,7 +888,7 @@ async function createGames(
 async function createTeams(
   client,
   teams,
-  db = database.NBAFANTASYLINEUP,
+  db = constants.database.CURRENT,
   collection = collections[2021].TEAMS
 ) {
   const options = { ordered: true };
@@ -1359,15 +908,20 @@ async function createTeams(
 async function createPlayers(
   client,
   players,
-  db = database.NBAFANTASYLINEUP,
+  db = constants.database.CURRENT,
   collection = collections[2021].PLAYERS
 ) {
-  const result = await client.db(db).collection(collection).insertMany(players);
+  if (players.length != 0) {
+    const result = await client
+      .db(db)
+      .collection(collection)
+      .insertMany(players);
 
-  if (Object.keys(result.insertedIds).length == players.length) {
-    console.log(players.length + " players created");
-  } else {
-    console.log("Error occcured during player creation");
+    if (Object.keys(result.insertedIds).length == players.length) {
+      console.log(players.length + " players created");
+    } else {
+      console.log("Error occcured during player creation");
+    }
   }
 }
 
@@ -1376,13 +930,13 @@ async function playersWithBirthdays(client) {
     var playerIds = [];
 
     const cursor = await client
-      .db(database.NBAFANTASYLINEUP)
+      .db(constants.database.CURRENT)
       .collection(collections[2021].PLAYERS)
       .find();
     const results = await cursor.toArray();
 
     results.forEach((result) => {
-      if (result.age != misc.playerAge(result.dateOfBirthUTC)) {
+      if (result.age != helpers.playerAge(result.dateOfBirthUTC)) {
         playerIds.push(result._id);
       }
     });
@@ -1396,7 +950,7 @@ async function playersWithBirthdays(client) {
 async function updatePlayers(client, playersWithBirthday, teamsWithNewGame) {
   try {
     await client
-      .db(database.NBAFANTASYLINEUP)
+      .db(constants.database.CURRENT)
       .collection(collections[2021].PLAYERS)
       .updateMany(
         { _id: { $in: playersWithBirthday } },
@@ -1442,7 +996,7 @@ async function updatePlayer(client, player) {
   const query = { _id: player.playerId };
 
   const result = await client
-    .db(database.NBAFANTASYLINEUP)
+    .db(constants.database.CURRENT)
     .collection(collections[2021].PLAYERS)
     .findOne(query);
 
@@ -1459,12 +1013,12 @@ async function updatePlayer(client, player) {
     // updatedSeasonAveraged.  Need to update team specific data
     // store season averages prior to lastNstats (season averages neglecting lastN games)
 
-    recentPlayedGames = misc.updateQueue(
+    recentPlayedGames = helpers.updateQueue(
       recentPlayedGames,
       player.playedGames,
       maxGames
     );
-    recentMissedGames = misc.updateQueue(
+    recentMissedGames = helpers.updateQueue(
       recentMissedGames,
       player.missedGames,
       maxGames
@@ -1482,9 +1036,9 @@ async function updatePlayer(client, player) {
 
     averages = calculations.playerAverages(
       recentPlayedGames,
-      statType.PLAYER,
-      statType.TEAM,
-      statType.OPPONENT
+      constants.statType.PLAYER,
+      constants.statType.TEAM,
+      constants.statType.OPPONENT
     );
 
     advanced = calculations.playerAdvanced(averages);
@@ -1514,7 +1068,7 @@ async function updatePlayer(client, player) {
     };
 
     await client
-      .db(database.NBAFANTASYLINEUP)
+      .db(constants.database.CURRENT)
       .collection(collections[2021].PLAYERS)
       .updateOne(query, update);
   }
@@ -1522,7 +1076,7 @@ async function updatePlayer(client, player) {
 
 async function findPlayerByName(client, nameOfPlayer) {
   const result = await client
-    .db(database.NBAFANTASYLINEUP)
+    .db(constants.database.CURRENT)
     .collection(collections[2021].PLAYERS)
     .findOne({ name: nameOfPlayer });
 
@@ -1542,7 +1096,7 @@ async function findPlayersByStatConstraint(
   { minimum = "", stat = "", maxPlayers = Number.MAX_SAFE_INTEGER } = {}
 ) {
   const cursor = await client
-    .db(database.NBAFANTASYLINEUP)
+    .db(constants.database.CURRENT)
     .collection(collections[2021].PLAYERS)
     .find({
       [stat]: { $gte: minimum },
@@ -1563,7 +1117,7 @@ async function findPlayersByStatConstraint(
 
 async function deletePlayer(client, id) {
   const result = await client
-    .db(database.NBAFANTASYLINEUP)
+    .db(constants.database.CURRENT)
     .collection(collections[2021].PLAYERS)
     .deleteOne({ _id: id });
 
@@ -1579,27 +1133,8 @@ async function listDatabases(client) {
   });
 }
 
-async function removePlayers(client) {
-  await client
-    .db(database.NBAFANTASYLINEUP)
-    .collection(collections[2021].PLAYERS)
-    .deleteMany({});
-}
-
-async function removeSchedule(client) {
-  await client
-    .db(database.NBAFANTASYLINEUP)
-    .collection(collections[2021].SCHEDULE)
-    .deleteMany({});
-}
-
-async function removeTeams(client) {
-  await client
-    .db(database.NBAFANTASYLINEUP)
-    .collection(collections[2021].TEAMS)
-    .deleteMany({});
-}
-
 async function removeCollection(client, db, collection, filter = {}) {
   await client.db(db).collection(collection).deleteMany(filter);
 }
+
+module.exports.rawTrainData = rawTrainData;

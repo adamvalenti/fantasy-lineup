@@ -1,5 +1,6 @@
 const requests = require("./apiRequests.js");
 const endpoints = require("./apiEndpoints.js");
+const constants = require("./constants.js");
 
 async function missingRoster(games, roster, seasonYear) {
   var missingPlayers = [];
@@ -1043,25 +1044,25 @@ function estimatedMatchupStats(opponents, playerPos) {
 
   var opponentPositions = {
     G: opponents.filter((opponent) => {
-      return opponent.pos === "G";
+      return opponent.pos === constants.positions.GUARD;
     }).length,
     GF: opponents.filter((opponent) => {
-      return opponent.pos === "GF";
+      return opponent.pos === constants.positions.GUARDFORWARD;
     }).length,
     FG: opponents.filter((opponent) => {
-      return opponent.pos === "FG";
+      return opponent.pos === constants.positions.FORWARDGUARD;
     }).length,
     F: opponents.filter((opponent) => {
-      return opponent.pos === "F";
+      return opponent.pos === constants.positions.FORWARD;
     }).length,
     FC: opponents.filter((opponent) => {
-      return opponent.pos === "FC";
+      return opponent.pos === constants.positions.FORWARDCENTER;
     }).length,
     CF: opponents.filter((opponent) => {
-      return opponent.pos === "CF";
+      return opponent.pos === constants.positions.CENTERFORWARD;
     }).length,
     C: opponents.filter((opponent) => {
-      return opponent.pos === "C";
+      return opponent.pos === constants.positions.CENTER;
     }).length,
   };
 

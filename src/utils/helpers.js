@@ -1,5 +1,5 @@
 const calculations = require("./calculations.js");
-const processing = require("./processing.js");
+const constants = require("./constants.js");
 
 function daysOld(dateOfBirth) {
   var year = dateOfBirth.substring(0, 4);
@@ -12,12 +12,6 @@ function daysOld(dateOfBirth) {
   const diffDays = Math.round((currDate - birthDate) / (24 * 60 * 60 * 1000));
 
   return diffDays;
-}
-
-function testDaysOld() {
-  var dateOfBirth = "2001-01-16";
-
-  console.log(daysOld(dateOfBirth));
 }
 
 function playerAge(dateString) {
@@ -262,6 +256,13 @@ function formatPlayer(player) {
 }
 
 function formatGame(game) {
+  var gameDate;
+  if (game.startDateEastern == undefined) {
+    gameDate = game.gameUrlCode.substring(0, 8);
+  } else {
+    gameDate = game.startDateEastern;
+  }
+
   var cleanedGame = {
     _id: game.gameId,
     seasonStageId: game.seasonStageId,
@@ -270,7 +271,7 @@ function formatGame(game) {
     extendedStatusNum: game.extendedStatusNum,
     isStartTimeTBD: game.isStartTimeTBD,
     startTimeUTC: game.startTimeUTC,
-    startDateEastern: convertDate(game.startDateEastern),
+    startDateEastern: convertDate(gameDate),
     isNeutralVenue: game.isNeutralVenue,
     startTimeEastern: game.startTimeEastern,
     updateStatus: game.updateStatus,
@@ -318,9 +319,7 @@ function formatTeamUpdate(
   teamData,
   roster,
   gamesPlayed,
-  scoringUsageRankings,
-  playmakingUsageRankings,
-  reboundingUsageRankings,
+  usageRankings,
   gamelog
 ) {
   var updates = {};
@@ -350,9 +349,7 @@ function formatTeamUpdate(
   }
   updates.gp = gamesPlayed;
   updates.gamelog = gamelog;
-  updates.scoringUsageRankings = scoringUsageRankings;
-  updates.playmakingUsageRankings = playmakingUsageRankings;
-  updates.reboundingUsageRankings = reboundingUsageRankings;
+  updates.usageRankings = usageRankings;
 
   command = {
     updateOne: {
@@ -385,11 +382,537 @@ function formatScheduleUpdate() {
   return [
     {
       updateMany: {
-        filter: { updateStatus: processing.updateStatus.PENDING },
-        update: { $set: { updateStatus: processing.updateStatus.COMPLETE } },
+        filter: { updateStatus: constants.updateStatus.PENDING },
+        update: { $set: { updateStatus: constants.updateStatus.COMPLETE } },
       },
     },
   ];
+}
+
+function formatMissingPlayers(missingPlayers) {
+  var cleanedPlayers = [];
+
+  if (missingPlayers.length != 0) {
+    cleanedPlayers = missingPlayers.map((player) => {
+      return {
+        _id: player.playerId,
+        name: player.name,
+        teamId:
+          player.seasonalStats[0] != undefined
+            ? player.seasonalStats[0].teams[0].teamId
+            : "",
+        pos: player.pos,
+        dateOfBirthUTC: "",
+        daysOld: "",
+        yearsPro: 0,
+        country: "",
+        stats: {
+          season: player.seasonalStats,
+          recent: {
+            playedGames: [],
+            missedGames: [],
+            differential: {
+              last3: {},
+              last5: {},
+              last7: {},
+              last10: {},
+            },
+            advanced: {
+              last3: {},
+              last5: {},
+              last7: {},
+              last10: {},
+            },
+            deviation: {},
+          },
+        },
+      };
+    });
+  }
+
+  return cleanedPlayers;
+}
+
+function assignPlayerStats(player, minsPlayed) {
+  var playerStats = {
+    playerId: player.personId,
+    pos: player.pos,
+    name: player.firstName + " " + player.lastName,
+    dnp: player.dnp,
+    stats: {
+      pts: parseInt(player.points),
+      ast: parseInt(player.assists),
+      drb: parseInt(player.defReb),
+      orb: parseInt(player.offReb),
+      stl: parseInt(player.steals),
+      blk: parseInt(player.blocks),
+      tov: parseInt(player.turnovers),
+      fgm: parseInt(player.fgm),
+      fga: parseInt(player.fga),
+      fgp: parseFloat(player.fgp),
+      tpm: parseInt(player.tpm),
+      tpa: parseInt(player.tpa),
+      tpp: parseFloat(player.tpp),
+      ftm: parseInt(player.ftm),
+      fta: parseInt(player.fta),
+      ftp: parseFloat(player.ftp),
+      mp: minsPlayed,
+      pf: parseInt(player.pFouls),
+      fp: calculations.playerFantasyPoints(
+        parseInt(player.points),
+        parseInt(player.assists),
+        parseInt(player.defReb) + parseInt(player.offReb),
+        parseInt(player.steals),
+        parseInt(player.blocks),
+        parseInt(player.turnovers)
+      ),
+    },
+  };
+
+  return playerStats;
+}
+
+function assignTeamStats(key, value, mins) {
+  key.pts = parseInt(value.points);
+  key.ast = parseInt(value.assists);
+  key.drb = parseInt(value.defReb);
+  key.orb = parseInt(value.offReb);
+  key.stl = parseInt(value.steals);
+  key.blk = parseInt(value.blocks);
+  key.tov = parseInt(value.turnovers);
+  key.fgm = parseInt(value.fgm);
+  key.fga = parseInt(value.fga);
+  key.tpm = parseInt(value.tpm);
+  key.tpa = parseInt(value.tpa);
+  key.ftm = parseInt(value.ftm);
+  key.fta = parseInt(value.fta);
+  key.mp = mins;
+  key.pf = parseInt(value.pFouls);
+  key.tf = parseInt(value.team_fouls);
+}
+
+function assignDnp(player) {
+  const reasons = {
+    MISSING_FROM_ROSTER: "Missing From Game Roster",
+    COACH_DECISION: "Coach's Decision",
+    INJURY_ILLNESS: "Injury / Illness",
+  };
+  if (player == undefined) {
+    return reasons.MISSING_FROM_ROSTER;
+  } else if (player.dnp == "") {
+    return reasons.COACH_DECISION;
+  } else if (player.dnp.substring(0, 3) == "DNP") {
+    return player.dnp.substring(5, player.dnp.length);
+  }
+}
+
+function assignNewPlayerGameStats(
+  player,
+  newPlayerGames,
+  playerGamesPlayed,
+  matchupGamesPlayed,
+  playerGameStats,
+  matchupGameStats,
+  teamGameStats
+) {
+  teamGameStats.new = newPlayerGames.map((game) => {
+    return game.team.teamStats;
+  });
+
+  playerGameStats.new = newPlayerGames.map((game) => {
+    return game.team.activePlayers
+      .filter((teamPlayer) => {
+        return teamPlayer.playerId == player.playerId;
+      })
+      .map((gamePlayer) => {
+        return gamePlayer.stats;
+      })[0];
+  });
+
+  matchupGameStats.new = newPlayerGames.map((game) => {
+    return game.team.activePlayers
+      .filter((teamPlayer) => {
+        return (
+          teamPlayer.playerId == player.playerId && teamPlayer.matchup != {}
+        );
+      })
+      .map((gamePlayer) => {
+        return gamePlayer.matchup;
+      })[0];
+  });
+
+  matchupGamesPlayed.new = matchupGameStats.new.length;
+
+  playerGamesPlayed.curr = playerGamesPlayed.old + playerGamesPlayed.new;
+  playerGameStats.curr = playerGameStats.old.concat(playerGameStats.new);
+  matchupGamesPlayed.curr = matchupGamesPlayed.old + matchupGamesPlayed.new;
+  matchupGameStats.curr = matchupGameStats.old.concat(matchupGameStats.new);
+}
+
+function assignNewAverages(gamesPlayed, averages, gameStats) {
+  if (gamesPlayed.new == 0) {
+    averages.curr = averages.old;
+  } else {
+    averages.new = calculations.newAverages(gameStats.new);
+    if (gamesPlayed.old == 0) {
+      averages.curr = averages.new;
+    } else {
+      averages.curr = calculations.currAverages(
+        averages.old,
+        averages.new,
+        gamesPlayed.old,
+        gamesPlayed.new,
+        gamesPlayed.curr
+      );
+    }
+  }
+}
+
+function assignMissingUsage(inactivePlayers, missingUsage) {
+  for (let j = 0; j < inactivePlayers.length; j++) {
+    for (var usage in missingUsage.all) {
+      missingUsage.all[usage] += inactivePlayers[j].usageAverage[usage];
+    }
+    if (inactivePlayers[j].pos != "") {
+      for (var usage in missingUsage[inactivePlayers[j].pos]) {
+        missingUsage[inactivePlayers[j].pos][usage] +=
+          inactivePlayers[j].usageAverage[usage];
+      }
+    }
+  }
+}
+
+function assignGameToTeam(sortedGames, teamA, teamB) {
+  if (sortedGames.hasOwnProperty(teamA.teamId)) {
+    sortedGames[teamA.teamId].push({
+      team: teamA,
+      opponent: teamB,
+    });
+  } else {
+    sortedGames[teamA.teamId] = [
+      {
+        team: teamA,
+        opponent: teamB,
+      },
+    ];
+  }
+}
+
+function filterGames(games) {
+  var cleanedGames;
+  var cleanedGame;
+  var hTeamActivePlayers;
+  var vTeamActivePlayers;
+  var hTeamInactivePlayers;
+  var vTeamInactivePlayers;
+
+  cleanedGames = games.map((game) => {
+    hTeamActivePlayers = activePlayers(game.hTeam.stats.player);
+    vTeamActivePlayers = activePlayers(game.vTeam.stats.player);
+    hTeamInactivePlayers = inactivePlayers(game.hTeam.stats.player);
+    vTeamInactivePlayers = inactivePlayers(game.vTeam.stats.player);
+
+    cleanedGame = {
+      hTeam: {
+        gameId: game._id,
+        teamId: game.hTeam.teamId,
+        teamStats: game.hTeam.stats.team,
+        activePlayers: hTeamActivePlayers,
+        inactivePlayers: hTeamInactivePlayers,
+      },
+      vTeam: {
+        gameId: game._id,
+        teamId: game.vTeam.teamId,
+        teamStats: game.vTeam.stats.team,
+        activePlayers: vTeamActivePlayers,
+        inactivePlayers: vTeamInactivePlayers,
+      },
+    };
+    return cleanedGame;
+  });
+
+  return cleanedGames;
+}
+
+function activePlayers(players) {
+  var activePlayers = players
+    .filter((player) => {
+      return player.stats.mp > 0;
+    })
+    .map((player) => {
+      return {
+        playerId: player.playerId,
+        name: player.name,
+        pos: player.pos,
+        dnp: player.dnp,
+        stats: {
+          pts: player.stats.pts,
+          ast: player.stats.ast,
+          drb: player.stats.drb,
+          orb: player.stats.orb,
+          stl: player.stats.stl,
+          blk: player.stats.blk,
+          tov: player.stats.tov,
+          fgm: player.stats.fgm,
+          fga: player.stats.fga,
+          tpm: player.stats.tpm,
+          tpa: player.stats.tpa,
+          ftm: player.stats.ftm,
+          fta: player.stats.fta,
+          mp: player.stats.mp,
+          pf: player.stats.pf,
+          fp: player.stats.fp,
+        },
+        matchup: player.matchup,
+      };
+    });
+  return activePlayers;
+}
+
+function inactivePlayers(players) {
+  var inactivePlayers = players
+    .filter((player) => {
+      return player.stats.mp == 0;
+    })
+    .map((player) => {
+      return {
+        playerId: player.playerId,
+        name: player.name,
+        pos: player.pos,
+        dnp: player.dnp,
+        stats: {},
+        matchup: {},
+      };
+    });
+  return inactivePlayers;
+}
+
+function sortGamesByTeam(games) {
+  var sortedGames = {};
+
+  for (let i = 0; i < games.length; i++) {
+    assignGameToTeam(sortedGames, games[i].hTeam, games[i].vTeam);
+    assignGameToTeam(sortedGames, games[i].vTeam, games[i].hTeam);
+  }
+
+  return sortedGames;
+}
+
+function updateNewGamelog(usageRankings, gamelog, sortedGames, team, roster) {
+  gamelog.new = sortedGames[team._id].map((game) => {
+    var missingUsage = {
+      all: {
+        scoring: 0,
+        playmaking: 0,
+        rebounding: 0,
+      },
+      G: {
+        scoring: 0,
+        playmaking: 0,
+        rebounding: 0,
+      },
+      GF: {
+        scoring: 0,
+        playmaking: 0,
+        rebounding: 0,
+      },
+      FG: {
+        scoring: 0,
+        playmaking: 0,
+        rebounding: 0,
+      },
+      F: {
+        scoring: 0,
+        playmaking: 0,
+        rebounding: 0,
+      },
+      FC: {
+        scoring: 0,
+        playmaking: 0,
+        rebounding: 0,
+      },
+      CF: {
+        scoring: 0,
+        playmaking: 0,
+        rebounding: 0,
+      },
+      C: {
+        scoring: 0,
+        playmaking: 0,
+        rebounding: 0,
+      },
+    };
+    var inactivePlayers = roster
+      .filter((rosterPlayer) => {
+        return (
+          game.team.activePlayers.filter((gamePlayer) => {
+            return gamePlayer.playerId == rosterPlayer.playerId;
+          }).length == 0
+        );
+      })
+      .map((inactivePlayer) => {
+        var match = game.team.inactivePlayers.filter((gamePlayer) => {
+          return gamePlayer.playerId == inactivePlayer.playerId;
+        })[0];
+
+        var dnp = assignDnp(match);
+
+        return {
+          playerId: inactivePlayer.playerId,
+          name: inactivePlayer.name,
+          pos: inactivePlayer.pos,
+          dnp: dnp,
+          usageAverage: {
+            scoring: usageRankings.scoring
+              .filter((player) => {
+                return player.playerId == inactivePlayer.playerId;
+              })
+              .map((player) => {
+                return player.scoringUsage;
+              })[0],
+            playmaking: usageRankings.playmaking
+              .filter((player) => {
+                return player.playerId == inactivePlayer.playerId;
+              })
+              .map((player) => {
+                return player.playmakingUsage;
+              })[0],
+            rebounding: usageRankings.rebounding
+              .filter((player) => {
+                return player.playerId == inactivePlayer.playerId;
+              })
+              .map((player) => {
+                return player.reboundingUsage;
+              })[0],
+          },
+        };
+      });
+
+    assignMissingUsage(inactivePlayers, missingUsage);
+
+    return {
+      gameId: game.team.gameId,
+      teamStats: game.team.teamStats,
+      activePlayers: game.team.activePlayers,
+      inactivePlayers: inactivePlayers,
+      missingUsage: missingUsage,
+      opponentId: game.opponent.teamId,
+      opponentStats: game.opponent.teamStats,
+    };
+  });
+}
+
+function updateOldGamelog(usageRankings, gamelog) {
+  usageRankings.scoring = calculations.usageRankings(
+    usageRankings.scoring,
+    constants.usageType.SCORING
+  );
+
+  usageRankings.playmaking = calculations.usageRankings(
+    usageRankings.playmaking,
+    constants.usageType.PLAYMAKING
+  );
+
+  usageRankings.rebounding = calculations.usageRankings(
+    usageRankings.rebounding,
+    constants.usageType.REBOUNDING
+  );
+
+  if (gamelog.old.length != 0) {
+    gamelog.old = gamelog.old.map((game) => {
+      var missingUsage = {
+        all: {
+          scoring: 0,
+          playmaking: 0,
+          rebounding: 0,
+        },
+        G: {
+          scoring: 0,
+          playmaking: 0,
+          rebounding: 0,
+        },
+        GF: {
+          scoring: 0,
+          playmaking: 0,
+          rebounding: 0,
+        },
+        FG: {
+          scoring: 0,
+          playmaking: 0,
+          rebounding: 0,
+        },
+        F: {
+          scoring: 0,
+          playmaking: 0,
+          rebounding: 0,
+        },
+        FC: {
+          scoring: 0,
+          playmaking: 0,
+          rebounding: 0,
+        },
+        CF: {
+          scoring: 0,
+          playmaking: 0,
+          rebounding: 0,
+        },
+        C: {
+          scoring: 0,
+          playmaking: 0,
+          rebounding: 0,
+        },
+      };
+      var inactivePlayers = game.inactivePlayers.map((inactivePlayer) => {
+        return {
+          playerId: inactivePlayer.playerId,
+          name: inactivePlayer.name,
+          pos: inactivePlayer.pos,
+          dnp: inactivePlayer.dnp,
+          usageAverage: {
+            scoring: usageRankings.scoring
+              .filter((player) => {
+                return player.playerId == inactivePlayer.playerId;
+              })
+              .map((player) => {
+                return player.scoringUsage;
+              })[0],
+            playmaking: usageRankings.playmaking
+              .filter((player) => {
+                return player.playerId == inactivePlayer.playerId;
+              })
+              .map((player) => {
+                return player.playmakingUsage;
+              })[0],
+            rebounding: usageRankings.rebounding
+              .filter((player) => {
+                return player.playerId == inactivePlayer.playerId;
+              })
+              .map((player) => {
+                return player.reboundingUsage;
+              })[0],
+          },
+        };
+      });
+
+      assignMissingUsage(inactivePlayers, missingUsage);
+
+      return {
+        gameId: game.gameId,
+        teamStats: game.teamStats,
+        activePlayers: game.activePlayers,
+        inactivePlayers: inactivePlayers,
+        missingUsage: missingUsage,
+        opponentId: game.opponentId,
+        opponentStats: game.opponentStats,
+      };
+    });
+  }
+}
+
+function updateGamelog(usageRankings, gamelog, sortedGames, team, roster) {
+  updateOldGamelog(usageRankings, gamelog);
+  updateNewGamelog(usageRankings, gamelog, sortedGames, team, roster);
+  gamelog.curr = gamelog.old.concat(gamelog.new);
 }
 
 module.exports.playerAge = playerAge;
@@ -399,9 +922,20 @@ module.exports.displayCurrentTime = displayCurrentTime;
 module.exports.playedGame = playedGame;
 module.exports.sortStats = sortStats;
 module.exports.updateQueue = updateQueue;
+
 module.exports.formatPlayer = formatPlayer;
 module.exports.formatGame = formatGame;
 module.exports.formatTeam = formatTeam;
 module.exports.formatTeamUpdate = formatTeamUpdate;
 module.exports.formatGameUpdate = formatGameUpdate;
 module.exports.formatScheduleUpdate = formatScheduleUpdate;
+module.exports.formatMissingPlayers = formatMissingPlayers;
+module.exports.assignPlayerStats = assignPlayerStats;
+module.exports.assignTeamStats = assignTeamStats;
+module.exports.assignDnp = assignDnp;
+module.exports.assignNewPlayerGameStats = assignNewPlayerGameStats;
+module.exports.assignNewAverages = assignNewAverages;
+module.exports.assignMissingUsage = assignMissingUsage;
+module.exports.filterGames = filterGames;
+module.exports.sortGamesByTeam = sortGamesByTeam;
+module.exports.updateGamelog = updateGamelog;

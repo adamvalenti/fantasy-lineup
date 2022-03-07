@@ -2,6 +2,7 @@ const helpers = require("./helpers.js");
 
 function main() {
   queueTest();
+  testDaysOld();
 }
 
 main();
@@ -24,4 +25,10 @@ function queueTest() {
   console.log(helpers.updateQueue(currQueue1, newQueue3, maxGames));
   console.log(helpers.updateQueue(currQueue2, newQueue3, maxGames));
   console.log(helpers.updateQueue(currQueue3, newQueue3, maxGames));
+}
+
+function testDaysOld() {
+  var dateOfBirth = "2001-01-16";
+
+  console.log(daysOld(dateOfBirth));
 }
