@@ -299,7 +299,7 @@ function leagueConstants() {
 
   // would be cool if leauge averages were projected for next season to help predict player improvement
 
-  leagueStats = {
+  var leagueStats = {
     pts: 112.1,
     ast: 24.8,
     orb: 9.8,
@@ -534,19 +534,11 @@ function playerDifferentials(recentGames, seasonAverages) {
     seasonAverages === undefined
       ? undefined
       : {
-          last3: calculations.lastNDifferential(recentGames, seasonAverages, 3),
-          last5: calculations.lastNDifferential(recentGames, seasonAverages, 7),
-          last9: calculations.lastNDifferential(recentGames, seasonAverages, 7),
-          last13: calculations.lastNDifferential(
-            recentGames,
-            seasonAverages,
-            10
-          ),
-          last20: calculations.lastNDifferential(
-            recentGames,
-            seasonAverages,
-            20
-          ),
+          last3: lastNDifferential(recentGames, seasonAverages, 3),
+          last5: lastNDifferential(recentGames, seasonAverages, 7),
+          last9: lastNDifferential(recentGames, seasonAverages, 7),
+          last13: lastNDifferential(recentGames, seasonAverages, 10),
+          last20: lastNDifferential(recentGames, seasonAverages, 20),
         };
 
   return differential;
@@ -555,29 +547,29 @@ function playerDifferentials(recentGames, seasonAverages) {
 function playerAverages(recentGames, player, team, opponent) {
   var averages = {
     last3: {
-      player: calculations.lastNAverages(recentGames, player, 3),
-      team: calculations.lastNAverages(recentGames, team, 3),
-      opponent: calculations.lastNAverages(recentGames, opponent, 3),
+      player: lastNAverages(recentGames, player, 3),
+      team: lastNAverages(recentGames, team, 3),
+      opponent: lastNAverages(recentGames, opponent, 3),
     },
     last5: {
-      player: calculations.lastNAverages(recentGames, player, 5),
-      team: calculations.lastNAverages(recentGames, team, 5),
-      opponent: calculations.lastNAverages(recentGames, opponent, 5),
+      player: lastNAverages(recentGames, player, 5),
+      team: lastNAverages(recentGames, team, 5),
+      opponent: lastNAverages(recentGames, opponent, 5),
     },
     last9: {
-      player: calculations.lastNAverages(recentGames, player, 9),
-      team: calculations.lastNAverages(recentGames, team, 9),
-      opponent: calculations.lastNAverages(recentGames, opponent, 9),
+      player: lastNAverages(recentGames, player, 9),
+      team: lastNAverages(recentGames, team, 9),
+      opponent: lastNAverages(recentGames, opponent, 9),
     },
     last13: {
-      player: calculations.lastNAverages(recentGames, player, 13),
-      team: calculations.lastNAverages(recentGames, team, 13),
-      opponent: calculations.lastNAverages(recentGames, opponent, 13),
+      player: lastNAverages(recentGames, player, 13),
+      team: lastNAverages(recentGames, team, 13),
+      opponent: lastNAverages(recentGames, opponent, 13),
     },
     last20: {
-      player: calculations.lastNAverages(recentGames, player, 20),
-      team: calculations.lastNAverages(recentGames, team, 20),
-      opponent: calculations.lastNAverages(recentGames, opponent, 20),
+      player: lastNAverages(recentGames, player, 20),
+      team: lastNAverages(recentGames, team, 20),
+      opponent: lastNAverages(recentGames, opponent, 20),
     },
   };
 
@@ -586,27 +578,27 @@ function playerAverages(recentGames, player, team, opponent) {
 
 function playerAdvanced(averages) {
   var advanced = {
-    last3: calculations.advancedPlayerStats(
+    last3: advancedPlayerStats(
       averages.last3.player,
       averages.last3.team,
       averages.last3.opponent
     ),
-    last5: calculations.advancedPlayerStats(
+    last5: advancedPlayerStats(
       averages.last5.player,
       averages.last5.team,
       averages.last5.opponent
     ),
-    last9: calculations.advancedPlayerStats(
+    last9: advancedPlayerStats(
       averages.last9.player,
       averages.last9.team,
       averages.last9.opponent
     ),
-    last13: calculations.advancedPlayerStats(
+    last13: advancedPlayerStats(
       averages.last13.player,
       averages.last13.team,
       averages.last13.opponent
     ),
-    last20: calculations.advancedPlayerStats(
+    last20: advancedPlayerStats(
       averages.last20.player,
       averages.last20.team,
       averages.last20.opponent
@@ -853,25 +845,24 @@ function statAverage(playerStats, stat) {}
 function leagueAverages(playerStats) {
   //add advanced stats to seasonal stats.  Calculate when adding and updating seasonal stats
   //add relevant stats to seasonal stats to make calculations easier
-
-  var leagueAverages = {
-    pts: statAverage(recentGames, type, n, "ppg"),
-    ast: statAverage(recentGames, type, n, "apg"),
-    drb: statAverage(recentGames, type, n, "drpg"),
-    orb: statAverage(recentGames, type, n, "orpg"),
-    stl: statAverage(recentGames, type, n, "bpg"),
-    blk: statAverage(recentGames, type, n, ""),
-    tov: statAverage(recentGames, type, n, "tov"),
-    fgm: statAverage(recentGames, type, n, "fgm"),
-    fga: statAverage(recentGames, type, n, "fga"),
-    tpm: statAverage(recentGames, type, n, "tpm"),
-    tpa: statAverage(recentGames, type, n, "tpa"),
-    ftm: statAverage(recentGames, type, n, "ftm"),
-    fta: statAverage(recentGames, type, n, "fta"),
-    mp: statAverage(recentGames, type, n, "mpg"),
-    pf: statAverage(recentGames, type, n, "pf"),
-    fp: statAverage(recentGames, type, n, "pf"),
-  };
+  // var leagueAverages = {
+  //   pts: statAverage(recentGames, type, n, "ppg"),
+  //   ast: statAverage(recentGames, type, n, "apg"),
+  //   drb: statAverage(recentGames, type, n, "drpg"),
+  //   orb: statAverage(recentGames, type, n, "orpg"),
+  //   stl: statAverage(recentGames, type, n, "bpg"),
+  //   blk: statAverage(recentGames, type, n, ""),
+  //   tov: statAverage(recentGames, type, n, "tov"),
+  //   fgm: statAverage(recentGames, type, n, "fgm"),
+  //   fga: statAverage(recentGames, type, n, "fga"),
+  //   tpm: statAverage(recentGames, type, n, "tpm"),
+  //   tpa: statAverage(recentGames, type, n, "tpa"),
+  //   ftm: statAverage(recentGames, type, n, "ftm"),
+  //   fta: statAverage(recentGames, type, n, "fta"),
+  //   mp: statAverage(recentGames, type, n, "mpg"),
+  //   pf: statAverage(recentGames, type, n, "pf"),
+  //   fp: statAverage(recentGames, type, n, "pf"),
+  // };
 }
 
 function newAverages(games) {

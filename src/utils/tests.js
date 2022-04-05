@@ -32,3 +32,15 @@ function testDaysOld() {
 
   console.log(daysOld(dateOfBirth));
 }
+
+async function testUsages() {
+  const client = await mongoClient();
+  try {
+    await client.connect();
+    await playerUsages(client);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    await client.close();
+  }
+}

@@ -24,9 +24,12 @@ function generateDataset(size) {
   */
 
   var rawTrainData = {};
+  var rawTestData = {};
 
   for (let seasonYear = 2016; seasonYear < 2019; seasonYear++) {
-    rawTrainData = await mongo.rawTrainData(seasonYear);
+    if (seasonYear >= 2016 || seasonYear <= 2017) {
+      rawTrainData = await mongo.rawTrainData(seasonYear);
+    }
   }
 }
 

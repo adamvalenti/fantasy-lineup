@@ -1,8 +1,8 @@
-.App {
+.app {
   text-align: center;
 }
 
-.App-logo {
+.app-logo {
   height: 40vmin;
   pointer-events: none;
 }
@@ -13,19 +13,37 @@
   }
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.body {
+  font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.42857143;
+  color: #58666e;
+  background-color: transparent;
+}
+
+.app-header {
+  background-color: #d3e6e6;
+  z-index: 1025;
+}
+
+.navbar {
+  margin: 0px;
+  border-width: 0px;
+}
+
+.app-link {
+  color: #61dafb;
+}
+
+.player-card {
+  background-color: #d3e6e6b4;
+  height: 500px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
+  color: #000000;
 }
 
 @keyframes App-logo-spin {

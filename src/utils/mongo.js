@@ -1,12 +1,13 @@
 const requests = require("./apiRequests.js");
 const helpers = require("./helpers.js");
 const calculations = require("./calculations.js");
-const { MongoClient } = require("mongodb");
-const config = require("../../config.json");
+const config = require("../config.json");
 const processing = require("./processing.js");
 const constants = require("./constants.js");
 
-async function mongoClient() {
+const { MongoClient } = require("mongodb");
+
+function mongoClient() {
   const MONGO_CONNECTION_STRING = config.MONGO_CONNECTION_STRING;
   const uri =
     "mongodb+srv://adamvalenti:" +
@@ -21,7 +22,7 @@ async function mongoClient() {
 
 async function main() {
   // need to fix functions to allow for model collections to be built.
-  const client = await mongoClient();
+  const client = mongoClient();
   try {
     await client.connect();
 
@@ -46,7 +47,7 @@ async function main() {
     var players = await pullCollection(
       client,
       constants.database.CURRENT,
-      constants.currentCollection[2021].PLAYERS
+      constants.collection.CURRENT[2021].PLAYERS
     );
 
     // helpers.displayCurrentTime();
@@ -55,14 +56,23 @@ async function main() {
     // await createGames(client, await requests.getSchedule(seasonYear));
 
     helpers.displayCurrentTime();
-    await updateGames(
-      client,
-      await requests.getUpdatedSchedule(
-        gamesToBeUpdated(await toBeUpdated(client)),
-        players,
-        seasonYear
-      )
-    );
+
+    // await sendUpdates(
+    //   client,
+    //   constants.database.HISTORICAL,
+    //   constants.collection.HISTORICAL[seasonYear].SCHEDULE,
+    //   await processing.scheduleUpdates(
+    //     gamesToBeUpdated(
+    //       await toBeUpdated(
+    //         client,
+    //         constants.database.HISTORICAL,
+    //         constants.collection.HISTORICAL[seasonYear].SCHEDULE
+    //       )
+    //     ),
+    //     players,
+    //     seasonYear
+    //   )
+    // );
 
     helpers.displayCurrentTime();
     await addGamesToTeams(client);
@@ -81,7 +91,7 @@ async function main() {
 
 async function getModelData() {
   var currYear = await requests.getSeasonYear();
-  for (let seasonYear = 2015; seasonYear < currYear; seasonYear++) {
+  for (let seasonYear = 2020; seasonYear < currYear; seasonYear++) {
     try {
       await getData(seasonYear);
     } catch (error) {
@@ -91,7 +101,7 @@ async function getModelData() {
 }
 
 async function getData(seasonYear) {
-  const client = await mongoClient();
+  const client = mongoClient();
   // const seasonYear = (await requests.getSeasonYear()) - 3;
 
   helpers.displayCurrentTime();
@@ -101,32 +111,32 @@ async function getData(seasonYear) {
     await removeCollection(
       client,
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].PLAYERS
+      constants.collection.HISTORICAL[seasonYear].PLAYERS
     );
 
     await removeCollection(
       client,
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].SCHEDULE
+      constants.collection.HISTORICAL[seasonYear].SCHEDULE
     );
 
     await removeCollection(
       client,
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].TEAMS
+      constants.collection.HISTORICAL[seasonYear].TEAMS
     );
 
     await createPlayers(
       client,
       await processing.players(seasonYear),
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].PLAYERS
+      constants.collection.HISTORICAL[seasonYear].PLAYERS
     );
 
     const players = await pullCollection(
       client,
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].PLAYERS
+      constants.collection.HISTORICAL[seasonYear].PLAYERS
     );
 
     var games = await processing.schedule(
@@ -134,7 +144,7 @@ async function getData(seasonYear) {
       await pullCollection(
         client,
         constants.database.HISTORICAL,
-        constants.historicalCollection[seasonYear].SCHEDULE
+        constants.collection.HISTORICAL[seasonYear].SCHEDULE
       )
     );
 
@@ -142,14 +152,14 @@ async function getData(seasonYear) {
       client,
       games,
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].SCHEDULE
+      constants.collection.HISTORICAL[seasonYear].SCHEDULE
     );
 
     await createTeams(
       client,
       await processing.teams(players, seasonYear),
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].TEAMS
+      constants.collection.HISTORICAL[seasonYear].TEAMS
     );
 
     helpers.displayCurrentTime();
@@ -157,13 +167,13 @@ async function getData(seasonYear) {
     await sendUpdates(
       client,
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].SCHEDULE,
+      constants.collection.HISTORICAL[seasonYear].SCHEDULE,
       await processing.scheduleUpdates(
         gamesToBeUpdated(
           await toBeUpdated(
             client,
             constants.database.HISTORICAL,
-            constants.historicalCollection[seasonYear].SCHEDULE
+            constants.collection.HISTORICAL[seasonYear].SCHEDULE
           )
         ),
         players,
@@ -175,9 +185,9 @@ async function getData(seasonYear) {
     await addGamesToTeams(
       client,
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].SCHEDULE,
-      constants.historicalCollection[seasonYear].TEAMS,
-      constants.historicalCollection[seasonYear].PLAYERS,
+      constants.collection.HISTORICAL[seasonYear].SCHEDULE,
+      constants.collection.HISTORICAL[seasonYear].TEAMS,
+      constants.collection.HISTORICAL[seasonYear].PLAYERS,
       seasonYear
     );
   } catch (error) {
@@ -188,13 +198,36 @@ async function getData(seasonYear) {
   }
 }
 
-getModelData().catch(console.error);
+// getModelData().catch(console.error);
 
 // main().catch(console.error);
 
 async function pullCollection(client, db, collection, filter = {}) {
   var items = await client.db(db).collection(collection).find(filter).toArray();
   return items;
+}
+
+export default async function getPlayerNames(year = 2016) {
+  const client = mongoClient();
+  var playerNames;
+  try {
+    await client.connect();
+    playerNames = await pullCollection(
+      client,
+      constants.database.HISTORICAL,
+      constants.collection.HISTORICAL[year].PLAYERS
+    )
+      .filter((player) => {
+        return player.name !== "";
+      })
+      .map((player) => {
+        return { [player._id]: player.name };
+      });
+  } catch (error) {
+    console.error(error);
+  }
+  client.close();
+  return playerNames;
 }
 
 async function addGamesToTeams(
@@ -205,15 +238,15 @@ async function addGamesToTeams(
   playersCollection,
   seasonYear
 ) {
-  var gameFilter = {
+  var filter = {
     updateStatus: constants.updateStatus.PENDING,
-    seasonStageId: 002,
+    seasonStageId: 2,
   };
   var playedGames = await pullCollection(
     client,
     db,
     scheduleCollection,
-    gameFilter
+    filter
   );
   var cleanedGames = helpers.filterGames(playedGames);
   var sortedGames = helpers.sortGamesByTeam(cleanedGames);
@@ -438,37 +471,25 @@ async function addGamesToTeams(
 }
 
 async function rawTrainData(seasonYear) {
-  const client = await mongoClient();
+  const client = mongoClient();
   var rawTrainData = {};
   try {
     await client.connect();
     rawTrainData.teams = await pullCollection(
       client,
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].TEAMS
+      constants.collection.HISTORICAL[seasonYear].TEAMS
     );
     rawTrainData.players = await pullCollection(
       client,
       constants.database.HISTORICAL,
-      constants.historicalCollection[seasonYear].PLAYERS
+      constants.collection.HISTORICAL[seasonYear].PLAYERS
     );
   } catch (error) {
     console.err(error);
   } finally {
     await client.close();
     return rawTrainData;
-  }
-}
-
-async function testUsages() {
-  const client = await mongoClient();
-  try {
-    await client.connect();
-    await playerUsages(client);
-  } catch (error) {
-    console.error(error);
-  } finally {
-    await client.close();
   }
 }
 
@@ -495,7 +516,7 @@ async function updateCollections(client) {
     console.log("Schedule Retrieved");
     helpers.displayCurrentTime();
 
-    await updateGames(client, games);
+    // await updateGames(client, games);
 
     // await updatePlayers(
     //   client,
@@ -513,9 +534,9 @@ async function updateCollections(client) {
 }
 
 async function removeCollections(client) {
-  await removePlayers(client);
-  await removeSchedule(client);
-  await removeTeams(client);
+  // await removeCollection(client);
+  // await removeSchedule(client);
+  // await removeTeams(client);
 }
 
 async function addLeague(client) {
@@ -561,7 +582,7 @@ async function addLeague(client) {
 
   await client
     .db(constants.database.CURRENT)
-    .collection(collections[2021].LEAGUE)
+    .collection(constants.collection.CURRENT.LEAGUE)
     .InsertMany(emptyLeagues, (error) => {
       if (error) {
         console.log("Error occured while adding league");
@@ -599,7 +620,7 @@ async function updateLeague(client) {
 
   const cursor = await client
     .db(constants.database.CURRENT)
-    .collection(collections[2021].PLAYERS)
+    .collection(constants.collection.CURRENT.PLAYERS)
     .find();
 
   const results = await cursor.toArray();
@@ -612,10 +633,10 @@ async function updateLeague(client) {
         pos: result.pos,
       };
 
-      players.all[result._id].firstGame = games.all.length;
+      players.all[result._id].firstGame = gamesPlayed.all.length;
       players.all[result._id] = player;
-      games.all.push(result.stats.recent.playedGames);
-      games.all.push(result);
+      gamesPlayed.all.push(result.stats.recent.playedGames);
+      gamesPlayed.all.push(result);
 
       if (result.pos == constants.positions.GUARD) {
         players.guards[result._id] = player;
@@ -632,14 +653,12 @@ async function updateLeague(client) {
       // }
     }
   });
-
-  var averages = calculations.leagueAverages(playerSeasonalStats);
 }
 
 async function toBeUpdated(
   client,
   db = constants.database.CURRENT,
-  collection = constants.currentCollection.SCHEDULE
+  collection = constants.collection.CURRENT.SCHEDULE
 ) {
   var results = [];
   try {
@@ -866,7 +885,7 @@ async function updateGame(client, game) {
 
   await client
     .db(constants.database.CURRENT)
-    .collection(constants.currentCollection.SCHEDULE)
+    .collection(constants.collection.CURRENT.SCHEDULE)
     .updateOne(query, update);
 }
 
@@ -874,7 +893,7 @@ async function createGames(
   client,
   games,
   db = constants.database.CURRENT,
-  collection = constants.currentCollection.SCHEDULE
+  collection = constants.collection.CURRENT.SCHEDULE
 ) {
   const result = await client.db(db).collection(collection).insertMany(games);
 
@@ -889,7 +908,7 @@ async function createTeams(
   client,
   teams,
   db = constants.database.CURRENT,
-  collection = collections[2021].TEAMS
+  collection = constants.collection.CURRENT.TEAMS
 ) {
   const options = { ordered: true };
 
@@ -909,7 +928,7 @@ async function createPlayers(
   client,
   players,
   db = constants.database.CURRENT,
-  collection = collections[2021].PLAYERS
+  collection = constants.collection.CURRENT.PLAYERS
 ) {
   if (players.length != 0) {
     const result = await client
@@ -931,7 +950,7 @@ async function playersWithBirthdays(client) {
 
     const cursor = await client
       .db(constants.database.CURRENT)
-      .collection(collections[2021].PLAYERS)
+      .collection(constants.collection.CURRENT.PLAYERS)
       .find();
     const results = await cursor.toArray();
 
@@ -951,7 +970,7 @@ async function updatePlayers(client, playersWithBirthday, teamsWithNewGame) {
   try {
     await client
       .db(constants.database.CURRENT)
-      .collection(collections[2021].PLAYERS)
+      .collection(constants.collection.CURRENT.PLAYERS)
       .updateMany(
         { _id: { $in: playersWithBirthday } },
         { $inc: { age: 1 } },
@@ -964,9 +983,9 @@ async function updatePlayers(client, playersWithBirthday, teamsWithNewGame) {
         }
       );
 
-    for (var teamId in teamsWithNewGame) {
-      await updateTeam(client, teamsWithNewGame[teamId]);
-    }
+    // for (var teamId in teamsWithNewGame) {
+    //   await updateTeam(client, teamsWithNewGame[teamId]);
+    // }
     console.log("All players updated");
   } catch (error) {
     console.error(error);
@@ -997,7 +1016,7 @@ async function updatePlayer(client, player) {
 
   const result = await client
     .db(constants.database.CURRENT)
-    .collection(collections[2021].PLAYERS)
+    .collection(constants.collection.CURRENT.PLAYERS)
     .findOne(query);
 
   if (result != null) {
@@ -1069,7 +1088,7 @@ async function updatePlayer(client, player) {
 
     await client
       .db(constants.database.CURRENT)
-      .collection(collections[2021].PLAYERS)
+      .collection(constants.collection.CURRENT.PLAYERS)
       .updateOne(query, update);
   }
 }
@@ -1077,7 +1096,7 @@ async function updatePlayer(client, player) {
 async function findPlayerByName(client, nameOfPlayer) {
   const result = await client
     .db(constants.database.CURRENT)
-    .collection(collections[2021].PLAYERS)
+    .collection(constants.collection.CURRENT.PLAYERS)
     .findOne({ name: nameOfPlayer });
 
   if (result) {
@@ -1097,7 +1116,7 @@ async function findPlayersByStatConstraint(
 ) {
   const cursor = await client
     .db(constants.database.CURRENT)
-    .collection(collections[2021].PLAYERS)
+    .collection(constants.collection.CURRENT.PLAYERS)
     .find({
       [stat]: { $gte: minimum },
     })
@@ -1118,7 +1137,7 @@ async function findPlayersByStatConstraint(
 async function deletePlayer(client, id) {
   const result = await client
     .db(constants.database.CURRENT)
-    .collection(collections[2021].PLAYERS)
+    .collection(constants.collection.CURRENT.PLAYERS)
     .deleteOne({ _id: id });
 
   console.log(result.name + " was deleted");
@@ -1138,3 +1157,5 @@ async function removeCollection(client, db, collection, filter = {}) {
 }
 
 module.exports.rawTrainData = rawTrainData;
+module.exports.findPlayerByName = findPlayerByName;
+module.exports.mongoClient = mongoClient;
