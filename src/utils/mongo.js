@@ -207,7 +207,7 @@ async function pullCollection(client, db, collection, filter = {}) {
   return items;
 }
 
-export default async function getPlayerNames(year = 2016) {
+async function getPlayerNames(year = 2016) {
   const client = mongoClient();
   var playerNames;
   try {
@@ -228,6 +228,10 @@ export default async function getPlayerNames(year = 2016) {
   }
   client.close();
   return playerNames;
+}
+
+async function updateLeagueAverages(client, db, teamsCollection, seasonYear) {
+  var playerAverages = {};
 }
 
 async function addGamesToTeams(
@@ -447,13 +451,20 @@ async function addGamesToTeams(
 
       helpers.updateGamelog(usageRankings, gamelog, sortedGames, team, roster);
 
+      var teamStats = gamelog.curr.map((game) => {
+        return game.teamStats;
+      });
+
+      var overallTeamAverages = calculations.newAverages(teamStats);
+
       teamUpdate = helpers.formatTeamUpdate(
         team._id,
         teamData,
         roster,
         teamGamesPlayed.curr,
         usageRankings,
-        gamelog.curr
+        gamelog.curr,
+        overallTeamAverages
       );
 
       updates.push(teamUpdate);
@@ -559,20 +570,48 @@ async function addLeague(client) {
     },
     {
       _id: "2",
-      name: constants.positions.FORWARD,
+      name: constants.positions.GUARDFORWARD,
       averages: {},
       deviation: {},
       sampleSize: {},
     },
     {
       _id: "3",
-      name: constants.positions.CENTER,
+      name: constants.positions.FORWARDGUARD,
       averages: {},
       deviation: {},
       sampleSize: {},
     },
     {
       _id: "4",
+      name: constants.positions.FORWARD,
+      averages: {},
+      deviation: {},
+      sampleSize: {},
+    },
+    {
+      _id: "5",
+      name: constants.positions.FORWARDCENTER,
+      averages: {},
+      deviation: {},
+      sampleSize: {},
+    },
+    {
+      _id: "6",
+      name: constants.positions.CENTERFORWARD,
+      averages: {},
+      deviation: {},
+      sampleSize: {},
+    },
+    {
+      _id: "7",
+      name: constants.positions.CENTER,
+      averages: {},
+      deviation: {},
+      sampleSize: {},
+    },
+    {
+      _id: "8",
       name: "Minutes Criteria",
       averages: {},
       deviation: {},
@@ -1156,6 +1195,4 @@ async function removeCollection(client, db, collection, filter = {}) {
   await client.db(db).collection(collection).deleteMany(filter);
 }
 
-module.exports.rawTrainData = rawTrainData;
-module.exports.findPlayerByName = findPlayerByName;
-module.exports.mongoClient = mongoClient;
+export { rawTrainData, findPlayerByName, mongoClient, getPlayerNames };

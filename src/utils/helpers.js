@@ -320,7 +320,8 @@ function formatTeamUpdate(
   roster,
   gamesPlayed,
   usageRankings,
-  gamelog
+  gamelog,
+  teamAverages
 ) {
   var updates = {};
   var updateString;
@@ -350,6 +351,7 @@ function formatTeamUpdate(
   updates.gp = gamesPlayed;
   updates.gamelog = gamelog;
   updates.usageRankings = usageRankings;
+  updates.teamAverages = teamAverages;
 
   command = {
     updateOne: {

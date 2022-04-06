@@ -1,12 +1,12 @@
 import "./App.css";
 import React, { useState, useRef, useEffect } from "react";
 import FantasyAnalytics from "./components/FantasyAnalytics";
-import { getPlayerNames } from "./utils/mongo.js";
+// import { getPlayerNames } from "./utils/mongo.js";
 
 const LOCAL_STORAGE_KEY = "fantasy.players";
 
 function App() {
-  const playerNames = getPlayerNames(2016);
+  // const playerNames = getPlayerNames(2016);
   const [players, setPlayers] = useState([]);
   const playerNameRef = useRef();
 
@@ -49,7 +49,7 @@ function App() {
       <button onClick={handleAddPlayer}> Add Player </button>
       <button onClick={handleClearPlayers}> Clear Roster </button>
       <div> {10 - players.length} Players remaining </div>
-      <ul> {playerNames} </ul>
+      {/* <ul> {playerNames} </ul> */}
     </>
   );
 }
