@@ -1,0 +1,29 @@
+GET http://localhost:3000/players/names
+
+###
+
+GET http://localhost:3000/players/2544
+
+###
+
+POST http://localhost:3000/players
+Content-Type: application/json
+
+{
+    "name": "Adam Valenti",
+    "age": 20
+}
+
+###
+
+GET http://localhost:3000/users
+
+###
+
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+    "username": "bigboysavage",
+    "password": "drip||drown"
+}

@@ -78,9 +78,4 @@ const collection = {
   },
 };
 
-module.exports.updateStatus = updateStatus;
-module.exports.statType = statType;
-module.exports.usageType = usageType;
-module.exports.positions = positions;
-module.exports.database = database;
-module.exports.collection = collection;
+export { updateStatus, statType, usageType, positions, database, collection };

@@ -1,30 +1,56 @@
 import "./App.css";
 import React, { useState, useRef, useEffect } from "react";
 import FantasyAnalytics from "./components/FantasyAnalytics";
-// import { getPlayerNames } from "./utils/mongo.js";
+import { getLeaguePlayers } from "./utils/mongo.js";
+import axios from "axios";
 
-const LOCAL_STORAGE_KEY = "fantasy.players";
+const LOCAL_FANTASY_PLAYERS_KEY = "fantasyRoster";
+const LOCAL_LEAGUE_PLAYERS_KEY = "leaguePlayers";
 
 function App() {
-  // const playerNames = getPlayerNames(2016);
-  const [players, setPlayers] = useState([]);
+  const url =
+    "https://webhooks.mongodb-stitch.com/api/client/v2.0/app/covid-19-qppza/service/REST-API/incoming_webhook/metadata";
+
+  const [fantasyPlayers, setFantasyPlayers] = useState([]);
+  const [leaguePlayers, setAllLeaguePlayers] = useState([]);
+
   const playerNameRef = useRef();
 
   useEffect(() => {
-    const storedPlayers = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY));
+    const storedPlayers = localStorage.getItem(LOCAL_LEAGUE_PLAYERS_KEY);
     if (storedPlayers) {
-      setPlayers(storedPlayers);
+      setAllLeaguePlayers(storedPlayers);
     }
   }, []);
+
   useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(players));
-  }, [players]);
+    axios.get(url).then((res) => {
+      setAllLeaguePlayers(res.data);
+      localStorage.setItem(LOCAL_LEAGUE_PLAYERS_KEY, leaguePlayers);
+    });
+  }, []);
+
+  useEffect(() => {
+    const storedPlayers = JSON.parse(
+      localStorage.getItem(LOCAL_FANTASY_PLAYERS_KEY)
+    );
+    if (storedPlayers) {
+      setFantasyPlayers(storedPlayers);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      LOCAL_FANTASY_PLAYERS_KEY,
+      JSON.stringify(fantasyPlayers)
+    );
+  }, [fantasyPlayers]);
 
   function viewPlayerCard(id) {
-    const newPlayers = [...players];
+    const newPlayers = [...fantasyPlayers];
     const player = newPlayers.find((player) => player.id === id);
     player.viewing = !player.viewing;
-    setPlayers(newPlayers);
+    setFantasyPlayers(newPlayers);
   }
 
   function handleAddPlayer() {
@@ -32,24 +58,26 @@ function App() {
     if (name === "") {
       return;
     }
-    setPlayers((prevPlayers) => {
+    setFantasyPlayers((prevPlayers) => {
       return [...prevPlayers, { id: 1, name: name, viewing: false }];
     });
     playerNameRef.current.value = null;
   }
 
   function handleClearPlayers() {
-    setPlayers([]);
+    setFantasyPlayers([]);
   }
 
   return (
     <>
-      <FantasyAnalytics players={players} viewPlayerCard={viewPlayerCard} />
+      <FantasyAnalytics
+        players={fantasyPlayers}
+        viewPlayerCard={viewPlayerCard}
+      />
       <input ref={playerNameRef} type="text" />
       <button onClick={handleAddPlayer}> Add Player </button>
       <button onClick={handleClearPlayers}> Clear Roster </button>
-      <div> {10 - players.length} Players remaining </div>
-      {/* <ul> {playerNames} </ul> */}
+      <div> {10 - fantasyPlayers.length} Players remaining </div>
     </>
   );
 }

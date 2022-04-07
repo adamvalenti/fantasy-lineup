@@ -1,8 +1,10 @@
-const requests = require("./apiRequests.js");
-const endpoints = require("./apiEndpoints.js");
-const constants = require("./constants.js");
+import { positions } from "./constants.js";
 
-async function missingRoster(games, roster, seasonYear) {
+import { playerProfileEndpoint } from "./apiEndpoints.js";
+
+import { getSeasonalStats } from "./apiRequests.js";
+
+async function calcMissingRoster(games, roster, seasonYear) {
   var missingPlayers = [];
   var gamesRoster = {};
   var gamesRosterIds = [];
@@ -27,8 +29,8 @@ async function missingRoster(games, roster, seasonYear) {
         return true;
       })
       .map(async function (playerId) {
-        var seasonalStats = await requests.getSeasonalStats(
-          endpoints.playerProfile(seasonYear, playerId)
+        var seasonalStats = await getSeasonalStats(
+          playerProfileEndpoint(seasonYear, playerId)
         );
 
         return {
@@ -58,18 +60,18 @@ async function missingRoster(games, roster, seasonYear) {
   return missingPlayers;
 }
 
-function advancedPlayerStats(player, team, opponent) {
+function calcAdvancedPlayerStats(player, team, opponent) {
   var advancedStats = {
-    ortg: playerOffRtg(player, team, opponent),
-    drtg: playerDefRtg(player, team, opponent),
-    // per: playerEffRtg(player, team, league),
-    usg: playerUsage(player, team),
+    ortg: calcPlayerOffRtg(player, team, opponent),
+    drtg: calcPlayerDefRtg(player, team, opponent),
+    // per: calcPlayerEffRtg(player, team, league),
+    usg: calcPlayerUsage(player, team),
   };
 
   return advancedStats;
 }
 
-function teamPos(team, opponent) {
+function calcTeamPos(team, opponent) {
   return (
     team.fga +
     0.4 * team.fta -
@@ -78,17 +80,19 @@ function teamPos(team, opponent) {
   );
 }
 
-function numOfTeamPos(team, opponent) {
-  return Math.round(0.5 * (teamPos(team, opponent) + teamPos(opponent, team)));
+function calcNumOfTeamPos(team, opponent) {
+  return Math.round(
+    0.5 * (calcTeamPos(team, opponent) + calcTeamPos(opponent, team))
+  );
 }
 
-function teamPace(team, opponent) {
+function calcTeamPace(team, opponent) {
   var pace = 48 * ((team.pos + opponent.pos) / (2 * (team.mp / 5)));
 
   return pace;
 }
 
-function playerFantasyPoints(pts, ast, reb, stl, blk, tov) {
+function calcPlayerFantasyPoints(pts, ast, reb, stl, blk, tov) {
   const sliders = {
     pts: 1,
     ast: 1.5,
@@ -109,7 +113,7 @@ function playerFantasyPoints(pts, ast, reb, stl, blk, tov) {
   return parseFloat(fantasyPoints);
 }
 
-function playerOffRtg(player, team, opponent) {
+function calcPlayerOffRtg(player, team, opponent) {
   var qAST =
     (player.mp / (team.mp / 5)) *
       (1.14 * ((team.ast - player.ast) / team.fgm)) +
@@ -184,77 +188,7 @@ function playerOffRtg(player, team, opponent) {
   return playerORtg;
 }
 
-function test() {
-  var player = {
-    stats: {
-      pts: 11,
-      ast: 0,
-      drb: 1,
-      orb: 0,
-      stl: 1,
-      blk: 0,
-      tov: 0,
-      fgm: 3,
-      fga: 9,
-      tpm: 2,
-      tpa: 7,
-      ftm: 3,
-      fta: 3,
-      mp: 22,
-      pf: 2,
-    },
-  };
-  var opponent = {
-    stats: {
-      pts: 131,
-      ast: 36,
-      drb: 44,
-      orb: 13,
-      stl: 13,
-      blk: 11,
-      tov: 9,
-      fgm: 51,
-      fga: 109,
-      tpm: 16,
-      tpa: 37,
-      ftm: 13,
-      fta: 18,
-      mp: 240,
-      pf: 24,
-      tf: 24,
-      pos: 109,
-      pace: 109,
-    },
-  };
-  var team = {
-    stats: {
-      pts: 129,
-      ast: 36,
-      drb: 44,
-      orb: 13,
-      stl: 13,
-      blk: 11,
-      tov: 9,
-      fgm: 51,
-      fga: 115,
-      tpm: 16,
-      tpa: 37,
-      ftm: 13,
-      fta: 18,
-      mp: 240,
-      pf: 24,
-      tf: 24,
-      pos: 109,
-      pace: 109,
-    },
-  };
-  console.log(advancedPlayerStats(player.stats, team.stats, opponent.stats));
-  console.log(lastNAverages());
-}
-
-// test();
-
-function playerDefRtg(player, team, opponent) {
+function calcPlayerDefRtg(player, team, opponent) {
   var dorp = opponent.orb / (opponent.orb + team.drb);
   var fmwt =
     ((opponent.fgm / opponent.fga) * (1 - dorp)) /
@@ -286,7 +220,7 @@ function playerDefRtg(player, team, opponent) {
   return playerDRtg;
 }
 
-function leagueConstants() {
+function calcLeagueConstants() {
   // var league = {
   //   factor:
   //     2 / 3 - (0.5 * (leagueStats.ast / leagueStats.fgm)) / (2 * (leagueStats.fgm / leagueStats.ftm));
@@ -332,7 +266,7 @@ function leagueConstants() {
   return league;
 }
 
-function playerEffRtg(player, team, league) {
+function calcPlayerEffRtg(player, team, league) {
   var uPER =
     (1 / player.mp) *
     (player.tpm +
@@ -360,7 +294,7 @@ function playerEffRtg(player, team, league) {
   return PER;
 }
 
-function playerUsage(player, team) {
+function calcPlayerUsage(player, team) {
   var usage =
     (100 * ((player.fga + 0.44 * player.fta + player.tov) * (team.mp / 5))) /
     (player.mp * (team.fga + 0.44 * team.fta + team.tov));
@@ -368,43 +302,48 @@ function playerUsage(player, team) {
   return usage;
 }
 
-function scoringUsage(player, team) {
+function calcScoringUsage(player, team) {
   var scoringUsage =
     (100 * (player.fga + 0.44 * player.fta)) / (team.fga + 0.44 * team.fta);
 
   return scoringUsage;
 }
 
-function playmakingUsage(player, team) {
+function calcPlaymakingUsage(player, team) {
   var playmakingUsage =
     (100 * (player.ast + player.tov)) / (team.ast + team.tov);
 
   return playmakingUsage;
 }
 
-function reboundingUsage(player, team) {
+function calcReboundingUsage(player, team) {
   var reboundingUsage =
     (100 * (player.orb + player.drb)) / (team.orb + team.drb);
 
   return reboundingUsage;
 }
 
-function usagePercentages(player, team, playerGamesPlayed, teamGamesPlayed) {
+function calcUsagePercentages(
+  player,
+  team,
+  playerGamesPlayed,
+  teamGamesPlayed
+) {
   // use these to predict increases to a players performance based on missing players in upcoming games
 
   var usagePercentages = {
     scoringUsage:
-      (scoringUsage(player, team) * playerGamesPlayed) / teamGamesPlayed,
+      (calcScoringUsage(player, team) * playerGamesPlayed) / teamGamesPlayed,
     playmakingUsage:
-      (playmakingUsage(player, team) * playerGamesPlayed) / teamGamesPlayed,
+      (calcPlaymakingUsage(player, team) * playerGamesPlayed) / teamGamesPlayed,
     reboundingUsage:
-      (reboundingUsage(player, team) * playerGamesPlayed) / teamGamesPlayed,
+      (calcReboundingUsage(player, team) * playerGamesPlayed) / teamGamesPlayed,
   };
 
   return usagePercentages;
 }
 
-function lastNStatAverage(recentGames, type, n, stat) {
+function calcLastNStatAverage(recentGames, type, n, stat) {
   var sum = 0;
   var lastNGames = recentGames;
   var num = n > lastNGames.length ? lastNGames.length : n;
@@ -415,32 +354,32 @@ function lastNStatAverage(recentGames, type, n, stat) {
   return sum / num;
 }
 
-function lastNAverages(recentGames, type, n) {
+function calcLastNAverages(recentGames, type, n) {
   var pos =
-    type == "team" || type == "opponent"
-      ? lastNStatAverage(recentGames, type, n, "pos")
+    type === "team" || type === "opponent"
+      ? calcLastNStatAverage(recentGames, type, n, "pos")
       : null;
   var pace =
-    type == "team" || type == "opponent"
-      ? lastNStatAverage(recentGames, type, n, "pace")
+    type === "team" || type === "opponent"
+      ? calcLastNStatAverage(recentGames, type, n, "pace")
       : null;
 
   var lastNAverages = {
-    pts: lastNStatAverage(recentGames, type, n, "pts"),
-    ast: lastNStatAverage(recentGames, type, n, "ast"),
-    drb: lastNStatAverage(recentGames, type, n, "drb"),
-    orb: lastNStatAverage(recentGames, type, n, "orb"),
-    stl: lastNStatAverage(recentGames, type, n, "stl"),
-    blk: lastNStatAverage(recentGames, type, n, "blk"),
-    tov: lastNStatAverage(recentGames, type, n, "tov"),
-    fgm: lastNStatAverage(recentGames, type, n, "fgm"),
-    fga: lastNStatAverage(recentGames, type, n, "fga"),
-    tpm: lastNStatAverage(recentGames, type, n, "tpm"),
-    tpa: lastNStatAverage(recentGames, type, n, "tpa"),
-    ftm: lastNStatAverage(recentGames, type, n, "ftm"),
-    fta: lastNStatAverage(recentGames, type, n, "fta"),
-    mp: lastNStatAverage(recentGames, type, n, "mp"),
-    pf: lastNStatAverage(recentGames, type, n, "pf"),
+    pts: calcLastNStatAverage(recentGames, type, n, "pts"),
+    ast: calcLastNStatAverage(recentGames, type, n, "ast"),
+    drb: calcLastNStatAverage(recentGames, type, n, "drb"),
+    orb: calcLastNStatAverage(recentGames, type, n, "orb"),
+    stl: calcLastNStatAverage(recentGames, type, n, "stl"),
+    blk: calcLastNStatAverage(recentGames, type, n, "blk"),
+    tov: calcLastNStatAverage(recentGames, type, n, "tov"),
+    fgm: calcLastNStatAverage(recentGames, type, n, "fgm"),
+    fga: calcLastNStatAverage(recentGames, type, n, "fga"),
+    tpm: calcLastNStatAverage(recentGames, type, n, "tpm"),
+    tpa: calcLastNStatAverage(recentGames, type, n, "tpa"),
+    ftm: calcLastNStatAverage(recentGames, type, n, "ftm"),
+    fta: calcLastNStatAverage(recentGames, type, n, "fta"),
+    mp: calcLastNStatAverage(recentGames, type, n, "mp"),
+    pf: calcLastNStatAverage(recentGames, type, n, "pf"),
     pos: pos,
     pace: pace,
   };
@@ -448,48 +387,60 @@ function lastNAverages(recentGames, type, n) {
   return lastNAverages;
 }
 
-function lastNDifferential(recentGames, seasonAverages, n) {
+function calcLastNDifferential(recentGames, seasonAverages, n) {
   var lastNDifferential = {
-    pts: lastNStatAverage(recentGames, "player", n, "pts") - seasonAverages.ppg,
-    ast: lastNStatAverage(recentGames, "player", n, "ast") - seasonAverages.apg,
+    pts:
+      calcLastNStatAverage(recentGames, "player", n, "pts") -
+      seasonAverages.ppg,
+    ast:
+      calcLastNStatAverage(recentGames, "player", n, "ast") -
+      seasonAverages.apg,
     drb:
-      lastNStatAverage(recentGames, "player", n, "drb") -
+      calcLastNStatAverage(recentGames, "player", n, "drb") -
       seasonAverages.drb / seasonAverages.gp,
     orb:
-      lastNStatAverage(recentGames, "player", n, "orb") -
+      calcLastNStatAverage(recentGames, "player", n, "orb") -
       seasonAverages.orb / seasonAverages.gp,
-    stl: lastNStatAverage(recentGames, "player", n, "stl") - seasonAverages.spg,
-    blk: lastNStatAverage(recentGames, "player", n, "blk") - seasonAverages.bpg,
+    stl:
+      calcLastNStatAverage(recentGames, "player", n, "stl") -
+      seasonAverages.spg,
+    blk:
+      calcLastNStatAverage(recentGames, "player", n, "blk") -
+      seasonAverages.bpg,
     tov:
-      lastNStatAverage(recentGames, "player", n, "tov") - seasonAverages.topg,
+      calcLastNStatAverage(recentGames, "player", n, "tov") -
+      seasonAverages.topg,
     fgm:
-      lastNStatAverage(recentGames, "player", n, "fgm") -
+      calcLastNStatAverage(recentGames, "player", n, "fgm") -
       seasonAverages.fgm / seasonAverages.gp,
     fga:
-      lastNStatAverage(recentGames, "player", n, "fga") -
+      calcLastNStatAverage(recentGames, "player", n, "fga") -
       seasonAverages.fga / seasonAverages.gp,
     tpm:
-      lastNStatAverage(recentGames, "player", n, "tpm") -
+      calcLastNStatAverage(recentGames, "player", n, "tpm") -
       seasonAverages.tpm / seasonAverages.gp,
     tpa:
-      lastNStatAverage(recentGames, "player", n, "tpa") -
+      calcLastNStatAverage(recentGames, "player", n, "tpa") -
       seasonAverages.tpa / seasonAverages.gp,
     ftm:
-      lastNStatAverage(recentGames, "player", n, "ftm") -
+      calcLastNStatAverage(recentGames, "player", n, "ftm") -
       seasonAverages.ftm / seasonAverages.gp,
     fta:
-      lastNStatAverage(recentGames, "player", n, "fta") -
+      calcLastNStatAverage(recentGames, "player", n, "fta") -
       seasonAverages.fta / seasonAverages.gp,
-    mp: lastNStatAverage(recentGames, "player", n, "mp") - seasonAverages.mpg,
+    mp:
+      calcLastNStatAverage(recentGames, "player", n, "mp") - seasonAverages.mpg,
     pf:
-      lastNStatAverage(recentGames, "player", n, "pf") -
+      calcLastNStatAverage(recentGames, "player", n, "pf") -
       seasonAverages.pf / seasonAverages.gp,
-    fp: lastNStatAverage(recentGames, "player", n, "fp") - seasonAverages.fppg,
+    fp:
+      calcLastNStatAverage(recentGames, "player", n, "fp") -
+      seasonAverages.fppg,
   };
   return lastNDifferential;
 }
 
-function statDeviation(recentGames, averages, maxGames, stat) {
+function calcStatDeviation(recentGames, averages, maxGames, stat) {
   var stdDev = 0;
   var sumOfSquares = 0;
   var lastNGames = recentGames;
@@ -504,101 +455,101 @@ function statDeviation(recentGames, averages, maxGames, stat) {
   return stdDev;
 }
 
-function playerDeviations(recentGames, averages, maxGames) {
+function calcPlayerDeviations(recentGames, averages, maxGames) {
   // should be per 48 min
 
   var deviation = {
-    pts: statDeviation(recentGames, averages, maxGames, "pts"),
-    ast: statDeviation(recentGames, averages, maxGames, "ast"),
-    drb: statDeviation(recentGames, averages, maxGames, "drb"),
-    orb: statDeviation(recentGames, averages, maxGames, "orb"),
-    stl: statDeviation(recentGames, averages, maxGames, "stl"),
-    blk: statDeviation(recentGames, averages, maxGames, "blk"),
-    tov: statDeviation(recentGames, averages, maxGames, "tov"),
-    fgm: statDeviation(recentGames, averages, maxGames, "fgm"),
-    fga: statDeviation(recentGames, averages, maxGames, "fga"),
-    tpm: statDeviation(recentGames, averages, maxGames, "tpm"),
-    tpa: statDeviation(recentGames, averages, maxGames, "tpa"),
-    ftm: statDeviation(recentGames, averages, maxGames, "ftm"),
-    fta: statDeviation(recentGames, averages, maxGames, "fta"),
-    mp: statDeviation(recentGames, averages, maxGames, "mp"),
-    pf: statDeviation(recentGames, averages, maxGames, "pf"),
-    fp: statDeviation(recentGames, averages, maxGames, "fp"),
+    pts: calcStatDeviation(recentGames, averages, maxGames, "pts"),
+    ast: calcStatDeviation(recentGames, averages, maxGames, "ast"),
+    drb: calcStatDeviation(recentGames, averages, maxGames, "drb"),
+    orb: calcStatDeviation(recentGames, averages, maxGames, "orb"),
+    stl: calcStatDeviation(recentGames, averages, maxGames, "stl"),
+    blk: calcStatDeviation(recentGames, averages, maxGames, "blk"),
+    tov: calcStatDeviation(recentGames, averages, maxGames, "tov"),
+    fgm: calcStatDeviation(recentGames, averages, maxGames, "fgm"),
+    fga: calcStatDeviation(recentGames, averages, maxGames, "fga"),
+    tpm: calcStatDeviation(recentGames, averages, maxGames, "tpm"),
+    tpa: calcStatDeviation(recentGames, averages, maxGames, "tpa"),
+    ftm: calcStatDeviation(recentGames, averages, maxGames, "ftm"),
+    fta: calcStatDeviation(recentGames, averages, maxGames, "fta"),
+    mp: calcStatDeviation(recentGames, averages, maxGames, "mp"),
+    pf: calcStatDeviation(recentGames, averages, maxGames, "pf"),
+    fp: calcStatDeviation(recentGames, averages, maxGames, "fp"),
   };
 
   return deviation;
 }
 
-function playerDifferentials(recentGames, seasonAverages) {
+function calcPlayerDifferentials(recentGames, seasonAverages) {
   var differential =
     seasonAverages === undefined
       ? undefined
       : {
-          last3: lastNDifferential(recentGames, seasonAverages, 3),
-          last5: lastNDifferential(recentGames, seasonAverages, 7),
-          last9: lastNDifferential(recentGames, seasonAverages, 7),
-          last13: lastNDifferential(recentGames, seasonAverages, 10),
-          last20: lastNDifferential(recentGames, seasonAverages, 20),
+          last3: calcLastNDifferential(recentGames, seasonAverages, 3),
+          last5: calcLastNDifferential(recentGames, seasonAverages, 7),
+          last9: calcLastNDifferential(recentGames, seasonAverages, 7),
+          last13: calcLastNDifferential(recentGames, seasonAverages, 10),
+          last20: calcLastNDifferential(recentGames, seasonAverages, 20),
         };
 
   return differential;
 }
 
-function playerAverages(recentGames, player, team, opponent) {
+function calcPlayerAverages(recentGames, player, team, opponent) {
   var averages = {
     last3: {
-      player: lastNAverages(recentGames, player, 3),
-      team: lastNAverages(recentGames, team, 3),
-      opponent: lastNAverages(recentGames, opponent, 3),
+      player: calcLastNAverages(recentGames, player, 3),
+      team: calcLastNAverages(recentGames, team, 3),
+      opponent: calcLastNAverages(recentGames, opponent, 3),
     },
     last5: {
-      player: lastNAverages(recentGames, player, 5),
-      team: lastNAverages(recentGames, team, 5),
-      opponent: lastNAverages(recentGames, opponent, 5),
+      player: calcLastNAverages(recentGames, player, 5),
+      team: calcLastNAverages(recentGames, team, 5),
+      opponent: calcLastNAverages(recentGames, opponent, 5),
     },
     last9: {
-      player: lastNAverages(recentGames, player, 9),
-      team: lastNAverages(recentGames, team, 9),
-      opponent: lastNAverages(recentGames, opponent, 9),
+      player: calcLastNAverages(recentGames, player, 9),
+      team: calcLastNAverages(recentGames, team, 9),
+      opponent: calcLastNAverages(recentGames, opponent, 9),
     },
     last13: {
-      player: lastNAverages(recentGames, player, 13),
-      team: lastNAverages(recentGames, team, 13),
-      opponent: lastNAverages(recentGames, opponent, 13),
+      player: calcLastNAverages(recentGames, player, 13),
+      team: calcLastNAverages(recentGames, team, 13),
+      opponent: calcLastNAverages(recentGames, opponent, 13),
     },
     last20: {
-      player: lastNAverages(recentGames, player, 20),
-      team: lastNAverages(recentGames, team, 20),
-      opponent: lastNAverages(recentGames, opponent, 20),
+      player: calcLastNAverages(recentGames, player, 20),
+      team: calcLastNAverages(recentGames, team, 20),
+      opponent: calcLastNAverages(recentGames, opponent, 20),
     },
   };
 
   return averages;
 }
 
-function playerAdvanced(averages) {
+function calcPlayerAdvanced(averages) {
   var advanced = {
-    last3: advancedPlayerStats(
+    last3: calcAdvancedPlayerStats(
       averages.last3.player,
       averages.last3.team,
       averages.last3.opponent
     ),
-    last5: advancedPlayerStats(
+    last5: calcAdvancedPlayerStats(
       averages.last5.player,
       averages.last5.team,
       averages.last5.opponent
     ),
-    last9: advancedPlayerStats(
+    last9: calcAdvancedPlayerStats(
       averages.last9.player,
       averages.last9.team,
       averages.last9.opponent
     ),
-    last13: advancedPlayerStats(
+    last13: calcAdvancedPlayerStats(
       averages.last13.player,
       averages.last13.team,
       averages.last13.opponent
     ),
-    last20: advancedPlayerStats(
+    last20: calcAdvancedPlayerStats(
       averages.last20.player,
       averages.last20.team,
       averages.last20.opponent
@@ -608,32 +559,32 @@ function playerAdvanced(averages) {
   return advanced;
 }
 
-function newSeasonAverages(recentGames, seasonAverages) {
+function calcNewSeasonAverages(recentGames, seasonAverages) {
   var numNewGames = recentGames.length;
   var numExistingGames = seasonAverages.gp;
   var numOfGames = numNewGames + numExistingGames;
 
   var perGameStats = {
-    pts: lastNStatAverage(recentGames, "player", numNewGames, "pts"),
-    ast: lastNStatAverage(recentGames, "player", numNewGames, "ast"),
-    orb: lastNStatAverage(recentGames, "player", numNewGames, "orb"),
-    drb: lastNStatAverage(recentGames, "player", numNewGames, "drb"),
-    stl: lastNStatAverage(recentGames, "player", numNewGames, "stl"),
-    blk: lastNStatAverage(recentGames, "player", numNewGames, "blk"),
-    tov: lastNStatAverage(recentGames, "player", numNewGames, "tov"),
-    tpm: lastNStatAverage(recentGames, "player", numNewGames, "tpm"),
-    tpa: lastNStatAverage(recentGames, "player", numNewGames, "tpa"),
-    tpp: lastNStatAverage(recentGames, "player", numNewGames, "pts"),
-    fgm: lastNStatAverage(recentGames, "player", numNewGames, "fgm"),
-    fga: lastNStatAverage(recentGames, "player", numNewGames, "fga"),
-    fgp: lastNStatAverage(recentGames, "player", numNewGames, "fpg"),
-    ftm: lastNStatAverage(recentGames, "player", numNewGames, "ftm"),
-    fta: lastNStatAverage(recentGames, "player", numNewGames, "fta"),
-    ftp: lastNStatAverage(recentGames, "player", numNewGames, "ftp"),
-    mp: lastNStatAverage(recentGames, "player", numNewGames, "mp"),
-    pf: lastNStatAverage(recentGames, "player", numNewGames, "pf"),
-    fp: lastNStatAverage(recentGames, "player", numNewGames, "fp"),
-    atr: lastNStatAverage(recentGames, "player", numNewGames, "atr"),
+    pts: calcLastNStatAverage(recentGames, "player", numNewGames, "pts"),
+    ast: calcLastNStatAverage(recentGames, "player", numNewGames, "ast"),
+    orb: calcLastNStatAverage(recentGames, "player", numNewGames, "orb"),
+    drb: calcLastNStatAverage(recentGames, "player", numNewGames, "drb"),
+    stl: calcLastNStatAverage(recentGames, "player", numNewGames, "stl"),
+    blk: calcLastNStatAverage(recentGames, "player", numNewGames, "blk"),
+    tov: calcLastNStatAverage(recentGames, "player", numNewGames, "tov"),
+    tpm: calcLastNStatAverage(recentGames, "player", numNewGames, "tpm"),
+    tpa: calcLastNStatAverage(recentGames, "player", numNewGames, "tpa"),
+    tpp: calcLastNStatAverage(recentGames, "player", numNewGames, "pts"),
+    fgm: calcLastNStatAverage(recentGames, "player", numNewGames, "fgm"),
+    fga: calcLastNStatAverage(recentGames, "player", numNewGames, "fga"),
+    fgp: calcLastNStatAverage(recentGames, "player", numNewGames, "fpg"),
+    ftm: calcLastNStatAverage(recentGames, "player", numNewGames, "ftm"),
+    fta: calcLastNStatAverage(recentGames, "player", numNewGames, "fta"),
+    ftp: calcLastNStatAverage(recentGames, "player", numNewGames, "ftp"),
+    mp: calcLastNStatAverage(recentGames, "player", numNewGames, "mp"),
+    pf: calcLastNStatAverage(recentGames, "player", numNewGames, "pf"),
+    fp: calcLastNStatAverage(recentGames, "player", numNewGames, "fp"),
+    atr: calcLastNStatAverage(recentGames, "player", numNewGames, "atr"),
   };
 
   var recentAverages = {
@@ -840,9 +791,9 @@ function newSeasonAverages(recentGames, seasonAverages) {
   return newAverages;
 }
 
-function statAverage(playerStats, stat) {}
+function calcStatAverage(playerStats, stat) {}
 
-function leagueAverages(playerStats) {
+function calcLeagueAverages(playerStats) {
   //add advanced stats to seasonal stats.  Calculate when adding and updating seasonal stats
   //add relevant stats to seasonal stats to make calculations easier
   // var leagueAverages = {
@@ -865,7 +816,7 @@ function leagueAverages(playerStats) {
   // };
 }
 
-function newAverages(games) {
+function calcNewAverages(games) {
   var totals = {
     pts: 0,
     ast: 0,
@@ -901,7 +852,7 @@ function newAverages(games) {
   return averages;
 }
 
-function currAverages(
+function calcCurrAverages(
   oldAverages,
   newAverages,
   oldGamesPlayed,
@@ -919,7 +870,7 @@ function currAverages(
   return currAverages;
 }
 
-function usageRankings(rankings, prop) {
+function calcUsageRankings(rankings, prop) {
   var sum = 0;
   for (let j = 0; j < rankings.length; j++) {
     sum += rankings[j][prop];
@@ -936,7 +887,7 @@ function usageRankings(rankings, prop) {
   return rankings;
 }
 
-function estimatedMatchupStats(opponents, playerPos) {
+function calcEstimatedMatchupStats(opponents, playerPos) {
   const matchupType = {
     PRIMARY: 9,
     SECONDARY: 3,
@@ -1010,7 +961,7 @@ function estimatedMatchupStats(opponents, playerPos) {
     },
   };
 
-  if (playerPos == "") {
+  if (playerPos === "") {
     return {};
   }
 
@@ -1035,25 +986,25 @@ function estimatedMatchupStats(opponents, playerPos) {
 
   var opponentPositions = {
     G: opponents.filter((opponent) => {
-      return opponent.pos === constants.positions.GUARD;
+      return opponent.pos === positions.GUARD;
     }).length,
     GF: opponents.filter((opponent) => {
-      return opponent.pos === constants.positions.GUARDFORWARD;
+      return opponent.pos === positions.GUARDFORWARD;
     }).length,
     FG: opponents.filter((opponent) => {
-      return opponent.pos === constants.positions.FORWARDGUARD;
+      return opponent.pos === positions.FORWARDGUARD;
     }).length,
     F: opponents.filter((opponent) => {
-      return opponent.pos === constants.positions.FORWARD;
+      return opponent.pos === positions.FORWARD;
     }).length,
     FC: opponents.filter((opponent) => {
-      return opponent.pos === constants.positions.FORWARDCENTER;
+      return opponent.pos === positions.FORWARDCENTER;
     }).length,
     CF: opponents.filter((opponent) => {
-      return opponent.pos === constants.positions.CENTERFORWARD;
+      return opponent.pos === positions.CENTERFORWARD;
     }).length,
     C: opponents.filter((opponent) => {
-      return opponent.pos === constants.positions.CENTER;
+      return opponent.pos === positions.CENTER;
     }).length,
   };
 
@@ -1067,7 +1018,7 @@ function estimatedMatchupStats(opponents, playerPos) {
   var factor = 1 / sumProduct;
 
   for (let i = 0; i < opponents.length; i++) {
-    if (opponents[i].pos != "" && opponents[i].stats.mp > 0) {
+    if (opponents[i].pos !== "" && opponents[i].stats.mp > 0) {
       for (let stat in matchupStats) {
         matchupStats[stat] +=
           opponents[i].stats[stat] *
@@ -1079,7 +1030,7 @@ function estimatedMatchupStats(opponents, playerPos) {
   return matchupStats;
 }
 
-function minutesPlayed(minsPlayed) {
+function calcMinutesPlayed(minsPlayed) {
   if (minsPlayed === "") {
     minsPlayed = 0;
   } else {
@@ -1090,23 +1041,25 @@ function minutesPlayed(minsPlayed) {
   return minsPlayed;
 }
 
-module.exports.minutesPlayed = minutesPlayed;
-module.exports.advancedPlayerStats = advancedPlayerStats;
-module.exports.leagueConstants = leagueConstants;
-module.exports.numOfTeamPos = numOfTeamPos;
-module.exports.teamPace = teamPace;
-module.exports.lastNDifferential = lastNDifferential;
-module.exports.playerFantasyPoints = playerFantasyPoints;
-module.exports.lastNAverages = lastNAverages;
-module.exports.playerDeviations = playerDeviations;
-module.exports.playerDifferentials = playerDifferentials;
-module.exports.playerAverages = playerAverages;
-module.exports.playerAdvanced = playerAdvanced;
-module.exports.newSeasonAverages = newSeasonAverages;
-module.exports.playerUsage = playerUsage;
-module.exports.newAverages = newAverages;
-module.exports.currAverages = currAverages;
-module.exports.usagePercentages = usagePercentages;
-module.exports.usageRankings = usageRankings;
-module.exports.missingRoster = missingRoster;
-module.exports.estimatedMatchupStats = estimatedMatchupStats;
+export {
+  calcMinutesPlayed,
+  calcAdvancedPlayerStats,
+  calcLeagueConstants,
+  calcNumOfTeamPos,
+  calcTeamPace,
+  calcLastNDifferential,
+  calcPlayerFantasyPoints,
+  calcLastNAverages,
+  calcPlayerDeviations,
+  calcPlayerDifferentials,
+  calcPlayerAverages,
+  calcPlayerAdvanced,
+  calcNewSeasonAverages,
+  calcPlayerUsage,
+  calcNewAverages,
+  calcCurrAverages,
+  calcUsagePercentages,
+  calcUsageRankings,
+  calcMissingRoster,
+  calcEstimatedMatchupStats,
+};

@@ -1,8 +1,14 @@
-const axios = require("axios");
-const endpoints = require("./apiEndpoints.js");
+import axios from "axios";
+
+import {
+  rootEndpoint,
+  playersEndpoint,
+  scheduleEndpoint,
+  teamsEndpoint,
+} from "./apiEndpoints.js";
 
 async function getSeasonYear() {
-  const url = endpoints.root();
+  const url = rootEndpoint();
   var seasonYear;
   await axios
     .get(url)
@@ -18,7 +24,7 @@ async function getSeasonYear() {
 }
 
 async function getPlayers(seasonYear) {
-  const url = endpoints.players(seasonYear);
+  const url = playersEndpoint(seasonYear);
   var players = [];
   await axios
     .get(url)
@@ -33,7 +39,7 @@ async function getPlayers(seasonYear) {
 }
 
 async function getSchedule(seasonYear) {
-  const url = endpoints.schedule(seasonYear);
+  const url = scheduleEndpoint(seasonYear);
   var games = [];
 
   await axios
@@ -49,7 +55,7 @@ async function getSchedule(seasonYear) {
 }
 
 async function getTeams(seasonYear) {
-  const url = endpoints.teams(seasonYear);
+  const url = teamsEndpoint(seasonYear);
   var teams = [];
 
   await axios
@@ -107,10 +113,12 @@ async function getSeasonalStats(url) {
   return seasonalStats;
 }
 
-module.exports.getTeams = getTeams;
-module.exports.getSchedule = getSchedule;
-module.exports.getPlayers = getPlayers;
-module.exports.getSeasonYear = getSeasonYear;
-module.exports.getSeasonalStats = getSeasonalStats;
-module.exports.getGame = getGame;
-module.exports.getRoster = getRoster;
+export {
+  getTeams,
+  getSchedule,
+  getPlayers,
+  getSeasonYear,
+  getSeasonalStats,
+  getGame,
+  getRoster,
+};

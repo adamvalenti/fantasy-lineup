@@ -1,18 +1,18 @@
-function root() {
+function rootEndpoint() {
   return "https://data.nba.net/10s/prod/v1/today.json";
 }
 
-function schedule(seasonYear) {
+function scheduleEndpoint(seasonYear) {
   return "http://data.nba.net/10s/prod/v1/" + seasonYear + "/schedule.json";
 }
 
-function game(gameDate, gameId) {
+function gameEndpoint(gameDate, gameId) {
   return (
     "https://data.nba.net/prod/v1/" + gameDate + "/" + gameId + "_boxscore.json"
   );
 }
 
-function playerProfile(seasonYear, playerId) {
+function playerProfileEndpoint(seasonYear, playerId) {
   return (
     "https://data.nba.net/10s/prod/v1/" +
     seasonYear +
@@ -22,15 +22,15 @@ function playerProfile(seasonYear, playerId) {
   );
 }
 
-function players(seasonYear) {
+function playersEndpoint(seasonYear) {
   return "https://data.nba.net/10s/prod/v1/" + seasonYear + "/players.json";
 }
 
-function teams(seasonYear) {
+function teamsEndpoint(seasonYear) {
   return "http://data.nba.net/10s/prod/v1/" + seasonYear + "/teams.json";
 }
 
-function roster(seasonYear, teamUrlName) {
+function rosterEndpoint(seasonYear, teamUrlName) {
   return (
     "http://data.nba.net/10s/prod/v1/" +
     seasonYear +
@@ -40,10 +40,12 @@ function roster(seasonYear, teamUrlName) {
   );
 }
 
-module.exports.root = root;
-module.exports.schedule = schedule;
-module.exports.game = game;
-module.exports.playerProfile = playerProfile;
-module.exports.players = players;
-module.exports.teams = teams;
-module.exports.roster = roster;
+export {
+  rootEndpoint,
+  scheduleEndpoint,
+  gameEndpoint,
+  playerProfileEndpoint,
+  playersEndpoint,
+  teamsEndpoint,
+  rosterEndpoint,
+};
