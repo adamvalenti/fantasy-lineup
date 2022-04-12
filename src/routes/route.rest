@@ -27,3 +27,7 @@ Content-Type: application/json
     "username": "bigboysavage",
     "password": "drip||drown"
 }
+
+###
+
+GET http://localhost:3000

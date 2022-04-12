@@ -28,6 +28,6 @@ db.once("open", () => {
 app.use("/players", playersRoute);
 app.use("/users", userRoute);
 
-app.listen(3000, () => {
+app.listen(4000, () => {
   console.log("server started");
 });
