@@ -1,0 +1,66 @@
+.playerCardBack {
+  width: 100%;
+  border-radius: 10px;
+  -webkit-box-shadow: 0px 0px 16px -8px rgba(0, 0, 0, 0.68);
+  box-shadow: 0px 0px 16px -8px rgba(0, 0, 0, 0.68);
+  background-color: rgb(241, 241, 241);
+}
+
+.playerCardBackWrapper {
+  padding: 10px 10px 0;
+}
+.playerCardBackHeader {
+  display: flex;
+  align-content: center;
+  justify-content: space-between;
+  height: auto;
+  width: 200px;
+  margin-bottom: 5px;
+}
+
+.playerCardBackName {
+  display: flex;
+  font-size: 26px;
+  font-weight: bold;
+}
+
+.playerCardBackHeaderRight {
+  display: flex;
+  cursor: pointer;
+  height: 25px;
+  border-radius: 20%;
+}
+
+.playerCardBackBody {
+  height: 350px;
+  position: relative;
+}
+
+.playerCardBackTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.playerCardBackTopLeft {
+  height: 100%;
+}
+
+.playerInfo {
+  display: flex;
+}
+
+.playerCardBackImg {
+  margin-top: 20px;
+  width: 100%;
+  object-fit: contain;
+  position: absolute;
+  bottom: 0;
+}
+
+.playerCardBackFooter {
+  background-color: rgb(30, 30, 30);
+  height: 15px;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}

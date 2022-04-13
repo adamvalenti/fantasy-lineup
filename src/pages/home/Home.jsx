@@ -5,14 +5,13 @@ import Leftbar from "../../components/leftbar/Leftbar";
 import Feed from "../../components/feed/Feed";
 import Rightbar from "../../components/rightbar/Rightbar";
 
-export default function home() {
+export default function Home() {
   return (
     <>
       <Topbar />
       <div className="homepageContainer">
         <Leftbar />
         <Feed />
-        <Rightbar />
       </div>
     </>
   );

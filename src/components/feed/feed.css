@@ -5,3 +5,14 @@
 .feedWrapper {
   padding: 20px;
 }
+
+.playerCards {
+  margin-top: 20px;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 243px);
+  grid-template-rows: repeat(auto-fill, auto);
+  grid-gap: 20px;
+}
