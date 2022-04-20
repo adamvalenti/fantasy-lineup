@@ -1,0 +1,134 @@
+.builder {
+  flex: 5.5;
+}
+
+.builderWrapper {
+  padding: 20px;
+}
+
+.lineupBox {
+  justify-content: center;
+  display: flex;
+  height: 350px;
+  width: 100%;
+}
+
+.playerCardBox {
+  width: 250px;
+  height: 330px;
+  position: relative;
+  padding: 10px;
+  justify-content: center;
+}
+
+.playerCardBoxButton {
+  outline-style: dashed;
+  outline-width: 3px;
+  outline-color: grey;
+  height: 100%;
+  width: 100%;
+  box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
+  align-items: center;
+  display: flex;
+  cursor: pointer;
+}
+
+.cardSearchBox {
+  position: absolute;
+  top: -60px;
+  left: 0;
+  background-color: white;
+  border-radius: 5px;
+  padding: 1rem;
+  box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
+  font-size: 16px;
+  border: none;
+}
+
+.searchBox-toggle-enter {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+.searchBox-toggle-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: all 150ms ease-in-out;
+}
+.searchBox-toggle-show-exit {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.searchBox-toggle-exit-active {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: all 150ms ease-in-out;
+}
+
+.addPlayerIcon {
+  margin: auto;
+  transform: scale(3);
+  color: grey;
+}
+
+.playerCardBoxButton:hover .addPlayerIcon {
+  transform: scale(4);
+}
+
+.builderTopbar {
+  height: 50px;
+  margin-bottom: 20px;
+  display: flex;
+  background-color: rgb(30, 30, 30);
+  border-radius: 10px;
+}
+
+.builderTopbarLeft {
+  display: flex;
+  flex: 1;
+  align-items: center;
+}
+
+.playerSearchBox {
+  width: auto;
+  height: 30px;
+  background-color: white;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  margin: auto;
+  padding-right: 5px;
+}
+
+.builderTopbarRight {
+  flex: 4;
+  align-items: center;
+  display: flex;
+  position: relative;
+}
+
+.filterIcon {
+  cursor: pointer;
+}
+
+.masterClearButton {
+  cursor: pointer;
+  color: white;
+  position: absolute;
+  left: calc(100% - 45px);
+}
+
+.clearIcon {
+  cursor: pointer;
+}
+
+.clearIcon:hover {
+  transform: scale(1.2);
+}
+
+.searchIcon:hover {
+  transform: scale(1.2);
+}

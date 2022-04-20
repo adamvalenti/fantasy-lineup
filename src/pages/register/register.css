@@ -1,50 +1,84 @@
-.profile {
+.login {
+  width: 100vw;
+  height: 100vh;
+  background-color: #f0f2f5;
   display: flex;
-}
-
-.profileRight {
-  flex: 9;
-}
-
-.profileCover {
-  height: 320px;
-  position: relative;
-}
-
-.profileCoverImg {
-  width: 100%;
-  height: 250px;
-  object-fit: cover;
-}
-
-.profileUserImg {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  object-fit: cover;
-  position: absolute;
-  left: 0;
-  right: 0;
-  margin: auto;
-  top: 150px;
-  border: 3px solid white;
-}
-
-.profileInfo {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
-.profileInfoName {
+.loginWrapper {
+  width: 70%;
+  height: 70%;
+  display: flex;
+}
+
+.loginLeft,
+.loginRight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.loginLogo {
+  font-size: 50px;
+  font-weight: 800;
+  color: darkorange;
+  margin-bottom: 10px;
+}
+
+.loginDesc {
   font-size: 24px;
 }
 
-.profileInfoDesc {
-  font-weight: 300;
+.loginBox {
+  height: 400px;
+  padding: 20px;
+  background-color: white;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.profileRightBottom {
-  display: flex;
+.loginInput {
+  height: 50px;
+  border-radius: 10px;
+  border: 1px solid gray;
+  font-size: 18px;
+  padding-left: 20px;
+}
+
+.loginInput:focus {
+  outline: none;
+}
+
+.loginButton {
+  height: 50px;
+  border-radius: 10px;
+  border: none;
+  background-color: darkorange;
+  color: white;
+  font-size: 20px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.loginForgot {
+  text-align: center;
+  color: grey;
+}
+
+.loginRegisterButton {
+  width: 60%;
+  align-self: center;
+  height: 50px;
+  border-radius: 10px;
+  border: none;
+  background-color: #42b72a;
+  color: white;
+  font-size: 20px;
+  font-weight: 500;
+  cursor: pointer;
 }

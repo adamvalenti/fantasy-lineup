@@ -1,5 +1,5 @@
 .leftbar {
-  flex: 1.5;
+  flex: 1;
   height: calc(100vh - 50px);
   overflow-y: scroll;
   position: sticky;
@@ -21,19 +21,37 @@
 }
 
 .leftbarList {
-  padding: 0;
-  margin: 0;
   list-style: none;
+  padding-left: 0pt;
 }
 
 .leftbarListItem {
+  margin-left: 0px;
+  width: 100%;
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
+  height: 50px;
+  font-weight: 450 !important;
+  font-size: 20px;
+  border-radius: 5px;
+}
+
+.leftbarListItem:hover {
+  background-color: rgb(225, 225, 225);
+  cursor: pointer !important;
+}
+
+.leftbarLink {
+  align-items: center;
+  display: flex;
+  color: black;
+  text-decoration: none;
+  border-radius: 20px;
 }
 
 .leftbarIcon {
   margin-right: 15px;
+  margin-left: 15px;
 }
 
 .leftbarButton {

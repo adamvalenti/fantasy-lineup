@@ -15,4 +15,4 @@ const playerSchema = new mongoose.Schema({
   },
 });
 
-export default mongoose.model("2016-player", playerSchema);
+export default mongoose.model("player", playerSchema);

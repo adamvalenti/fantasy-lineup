@@ -20,11 +20,40 @@ export default function Front({ player }) {
               <span className="playerInfo">country: {player.country}</span>
             </div>
             <div className="playerCardFrontTopRight">
-              <span className="playerInfo">ppg: {player.ppg}</span>
-              <span className="playerInfo">apg: {player.apg}</span>
-              <span className="playerInfo">rpg: {player.rpg}</span>
-              <span className="playerInfo">spg: {player.spg}</span>
-              <span className="playerInfo">bpg: {player.bpg}</span>
+              <span className="playerInfo">
+                ppg:{" "}
+                {(
+                  Math.round(player.stats.season[0].perGame.pts * 100) / 100
+                ).toFixed(1)}
+              </span>
+              <span className="playerInfo">
+                apg:{" "}
+                {(
+                  Math.round(player.stats.season[0].perGame.ast * 100) / 100
+                ).toFixed(1)}
+              </span>
+              <span className="playerInfo">
+                rpg:{" "}
+                {(
+                  Math.round(
+                    (player.stats.season[0].perGame.orb +
+                      player.stats.season[0].perGame.drb) *
+                      100
+                  ) / 100
+                ).toFixed(1)}
+              </span>
+              <span className="playerInfo">
+                spg:{" "}
+                {(
+                  Math.round(player.stats.season[0].perGame.blk * 100) / 100
+                ).toFixed(1)}
+              </span>
+              <span className="playerInfo">
+                bpg:{" "}
+                {(
+                  Math.round(player.stats.season[0].perGame.stl * 100) / 100
+                ).toFixed(1)}
+              </span>
             </div>
           </div>
           <img

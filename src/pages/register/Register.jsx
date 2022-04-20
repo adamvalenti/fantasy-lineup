@@ -1,41 +1,25 @@
 import React from "react";
 import "./register.css";
-import Topbar from "../../components/topbar/Topbar";
-import Leftbar from "../../components/leftbar/Leftbar";
-import Feed from "../../components/feed/Feed";
-import Rightbar from "../../components/rightbar/Rightbar";
 
-export default function Profile() {
+export default function Register() {
   return (
-    <>
-      <Topbar />
-      <div className="profile">
-        <Leftbar />
-        <div className="profileRight">
-          <div className="profileRightTop">
-            <div className="profileCover">
-              <img
-                className="profileCoverImg"
-                src="assets/post/3.jpeg"
-                alt=""
-              />
-              <img
-                className="profileUserImg"
-                src="assets/person/7.jpeg"
-                alt=""
-              />
-            </div>
-            <div className="profileInfo">
-              <h4 className="profileInfoName">Safak Kocaoglu</h4>
-              <span className="profileInfoDesc">Hello my friends!</span>
-            </div>
-          </div>
-          <div className="profileRightBottom">
-            <Feed />
-            <Rightbar profile />
+    <div className="login">
+      <div className="loginWrapper">
+        <div className="loginLeft">
+          <h3 className="loginLogo">Neighbourhood Fantasy</h3>
+          <span className="loginDesc">NBA fantasy Insight</span>
+        </div>
+        <div className="loginRight">
+          <div className="loginBox">
+            <input placeholder="Username" className="loginInput" />
+            <input placeholder="Email" className="loginInput" />
+            <input placeholder="Password" className="loginInput" />
+            <input placeholder="Confirm Password" className="loginInput" />
+            <button className="loginButton">Sign Up</button>
+            <button className="loginRegisterButton">Log into Account</button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -230,32 +230,32 @@ function formatPlayer(player) {
     teamId: player.teamId,
     jersey: parseInt(player.jersey),
     pos: player.pos,
-    heightFeet: parseInt(player.heightFeet),
-    heightInches: parseInt(player.heightInches),
-    weightPounds: parseInt(player.weightPounds),
+    height: player.heightFeet + "-" + player.heightInches,
+    weight: parseInt(player.weightPounds),
     dateOfBirthUTC: player.dateOfBirthUTC,
     daysOld: daysOld(player.dateOfBirthUTC),
+    age: playerAge(player.dateOfBirthUTC),
     yearsPro: parseInt(player.yearsPro),
     country: player.country,
     stats: {
       season: seasonsPlayed,
-      recent: {
-        playedGames: [],
-        missedGames: [],
-        differential: {
-          last3: {},
-          last5: {},
-          last7: {},
-          last10: {},
-        },
-        advanced: {
-          last3: {},
-          last5: {},
-          last7: {},
-          last10: {},
-        },
-        deviation: {},
-      },
+      // recent: {
+      //   playedGames: [],
+      //   missedGames: [],
+      //   differential: {
+      //     last3: {},
+      //     last5: {},
+      //     last7: {},
+      //     last10: {},
+      //   },
+      //   advanced: {
+      //     last3: {},
+      //     last5: {},
+      //     last7: {},
+      //     last10: {},
+      //   },
+      //   deviation: {},
+      // },
     },
   };
   return cleanedPlayer;
@@ -416,23 +416,23 @@ function formatMissingPlayers(missingPlayers) {
         country: "",
         stats: {
           season: player.seasonalStats,
-          recent: {
-            playedGames: [],
-            missedGames: [],
-            differential: {
-              last3: {},
-              last5: {},
-              last7: {},
-              last10: {},
-            },
-            advanced: {
-              last3: {},
-              last5: {},
-              last7: {},
-              last10: {},
-            },
-            deviation: {},
-          },
+          // recent: {
+          //   playedGames: [],
+          //   missedGames: [],
+          //   differential: {
+          //     last3: {},
+          //     last5: {},
+          //     last7: {},
+          //     last10: {},
+          //   },
+          //   advanced: {
+          //     last3: {},
+          //     last5: {},
+          //     last7: {},
+          //     last10: {},
+          //   },
+          //   deviation: {},
+          // },
         },
       };
     });

@@ -1,7 +1,7 @@
 .topbarContainer {
   height: 50px;
   width: 100%;
-  background-color: rgb(229, 115, 45);
+  background-color: darkorange;
   display: flex;
   align-items: center;
   position: sticky;
@@ -37,6 +37,7 @@
 .searchIcon {
   font-size: 20px !important;
   margin-left: 10px;
+  cursor: pointer;
 }
 
 .searchInput {

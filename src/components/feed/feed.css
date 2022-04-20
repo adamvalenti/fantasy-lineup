@@ -6,13 +6,64 @@
   padding: 20px;
 }
 
-.playerCards {
-  margin-top: 20px;
-}
-
 .cardGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 243px);
+  grid-template-columns: auto 5fr;
   grid-template-rows: repeat(auto-fill, auto);
   grid-gap: 20px;
+}
+
+.feedTopbar {
+  height: 50px;
+  margin-bottom: 20px;
+  display: flex;
+  background-color: rgb(30, 30, 30);
+  border-radius: 10px;
+}
+
+.feedTopbarLeft {
+  display: flex;
+  flex: 4;
+  align-items: center;
+}
+
+.playerSearchBox {
+  width: auto;
+  height: 30px;
+  background-color: white;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  margin: auto;
+  padding-right: 5px;
+}
+
+.feedTopbarRight {
+  flex: 1;
+  align-items: center;
+  display: flex;
+  position: relative;
+}
+
+.filterIcon {
+  cursor: pointer;
+}
+
+.masterClearButton {
+  cursor: pointer;
+  color: white;
+  position: absolute;
+  left: calc(100% - 45px);
+}
+
+.clearIcon {
+  cursor: pointer;
+}
+
+.clearIcon:hover {
+  transform: scale(1.2);
+}
+
+.searchIcon:hover {
+  transform: scale(1.2);
 }

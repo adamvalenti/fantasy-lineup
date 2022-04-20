@@ -18,6 +18,7 @@ router.post("/", async (req, res) => {
   const user = new User({
     username: req.body.username,
     password: req.body.password,
+    email: req.body.email,
   });
   try {
     const savedUser = await user.save();

@@ -6,14 +6,12 @@ export default function Login() {
     <div className="login">
       <div className="loginWrapper">
         <div className="loginLeft">
-          <h3 className="loginLogo">Lamasocial</h3>
-          <span className="loginDesc">
-            Connect with friends and the world around you on Lamasocial.
-          </span>
+          <h3 className="loginLogo">Neighbourhood Fantasy</h3>
+          <span className="loginDesc">NBA fantasy insight</span>
         </div>
         <div className="loginRight">
           <div className="loginBox">
-            <input placeholder="Email" className="loginInput" />
+            <input placeholder="Username" className="loginInput" />
             <input placeholder="Password" className="loginInput" />
             <button className="loginButton">Log In</button>
             <span className="loginForgot">Forgot Password?</span>

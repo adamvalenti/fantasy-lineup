@@ -41,26 +41,20 @@ import {
   sortGamesByTeam,
   updateGamelog,
 } from "./helpers.js";
+import dotenv from "dotenv";
 
 import { MongoClient } from "mongodb";
 
 // import config from "../config.json" assert { type: "json" };
 
-function mongoClient(db = database.HISTORICAL) {
-  // const MONGO_CONNECTION_STRING = config.MONGO_CONNECTION_STRING;
-  const MONGO_CONNECTION_STRING = "Unclebob5630!";
-  const uri =
-    "mongodb+srv://adamvalenti:" +
-    MONGO_CONNECTION_STRING +
-    "@adam.ogm6r.mongodb.net/" +
-    db +
-    "?retryWrites=true&w=majority";
+function mongoClient(db = database.CURRENT) {
+  dotenv.config({ path: "../.env" });
 
-  async function fetchClient() {
-    const client = await MongoClient.connect(uri);
-    return client;
-  }
-  return fetchClient();
+  const uri = process.env.CURRENT_DATABASE_URL;
+
+  const client = new MongoClient(uri);
+
+  return client;
 }
 
 //function to update teams roster
@@ -85,70 +79,66 @@ async function getData(seasonYear) {
 
     await removeCollection(
       client,
-      database.HISTORICAL,
-      collection.HISTORICAL[seasonYear].PLAYERS
+      database.CURRENT,
+      collection.CURRENT.PLAYERS
     );
 
     await removeCollection(
       client,
-      database.HISTORICAL,
-      collection.HISTORICAL[seasonYear].SCHEDULE
+      database.CURRENT,
+      collection.CURRENT.SCHEDULE
     );
 
-    await removeCollection(
-      client,
-      database.HISTORICAL,
-      collection.HISTORICAL[seasonYear].TEAMS
-    );
+    await removeCollection(client, database.CURRENT, collection.CURRENT.TEAMS);
 
     await createPlayers(
       client,
       await cleanPlayers(seasonYear),
-      database.HISTORICAL,
-      collection.HISTORICAL[seasonYear].PLAYERS
+      database.CURRENT,
+      collection.CURRENT.PLAYERS
     );
 
     const players = await pullCollection(
       client,
-      database.HISTORICAL,
-      collection.HISTORICAL[seasonYear].PLAYERS
+      database.CURRENT,
+      collection.CURRENT.PLAYERS
     );
 
     var games = await cleanSchedule(
       seasonYear,
       await pullCollection(
         client,
-        database.HISTORICAL,
-        collection.HISTORICAL[seasonYear].SCHEDULE
+        database.CURRENT,
+        collection.CURRENT.SCHEDULE
       )
     );
 
     await createGames(
       client,
       games,
-      database.HISTORICAL,
-      collection.HISTORICAL[seasonYear].SCHEDULE
+      database.CURRENT,
+      collection.CURRENT.SCHEDULE
     );
 
     await createTeams(
       client,
       await cleanTeams(players, seasonYear),
-      database.HISTORICAL,
-      collection.HISTORICAL[seasonYear].TEAMS
+      database.CURRENT,
+      collection.CURRENT.TEAMS
     );
 
     displayCurrentTime();
 
     await sendUpdates(
       client,
-      database.HISTORICAL,
-      collection.HISTORICAL[seasonYear].SCHEDULE,
+      database.CURRENT,
+      collection.CURRENT.SCHEDULE,
       await cleanScheduleUpdates(
         gamesToBeUpdated(
           await toBeUpdated(
             client,
-            database.HISTORICAL,
-            collection.HISTORICAL[seasonYear].SCHEDULE
+            database.CURRENT,
+            collection.CURRENT.SCHEDULE
           )
         ),
         players,
@@ -159,10 +149,10 @@ async function getData(seasonYear) {
     displayCurrentTime();
     await addGamesToTeams(
       client,
-      database.HISTORICAL,
-      collection.HISTORICAL[seasonYear].SCHEDULE,
-      collection.HISTORICAL[seasonYear].TEAMS,
-      collection.HISTORICAL[seasonYear].PLAYERS,
+      database.CURRENT,
+      collection.CURRENT.SCHEDULE,
+      collection.CURRENT.TEAMS,
+      collection.CURRENT.PLAYERS,
       seasonYear
     );
   } catch (error) {
@@ -173,9 +163,11 @@ async function getData(seasonYear) {
   }
 }
 
-// getModelData().catch(console.error);
+async function main() {
+  await getData(await getSeasonYear());
+}
 
-// main().catch(console.error);
+main().catch(console.error);
 
 async function pullCollection(client, db, collection, filter = {}) {
   var items = await client.db(db).collection(collection).find(filter).toArray();
@@ -1099,4 +1091,4 @@ async function removeCollection(client, db, collection, filter = {}) {
   await client.db(db).collection(collection).deleteMany(filter);
 }
 
-export { rawTrainData, findPlayerByName, mongoClient, getLeaguePlayers };
+export { rawTrainData, findPlayerByName, mongoClient };

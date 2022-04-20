@@ -3,27 +3,11 @@ import FantasyAnalytics from "./components/FantasyAnalytics";
 import axios from "axios";
 
 const LOCAL_FANTASY_PLAYERS_KEY = "fantasyRoster";
-const LOCAL_LEAGUE_PLAYERS_KEY = "leaguePlayers";
 
 function App() {
   const [fantasyPlayers, setFantasyPlayers] = useState([]);
-  const [leaguePlayers, setAllLeaguePlayers] = useState([]);
 
   const playerNameRef = useRef();
-
-  // useEffect(() => {
-  //   const storedPlayers = localStorage.getItem(LOCAL_LEAGUE_PLAYERS_KEY);
-  //   if (storedPlayers) {
-  //     setAllLeaguePlayers(storedPlayers);
-  //   }
-  // }, []);
-
-  // useEffect(() => {
-  //   axios.get(url).then((res) => {
-  //     setAllLeaguePlayers(res.data);
-  //     localStorage.setItem(LOCAL_LEAGUE_PLAYERS_KEY, leaguePlayers);
-  //   });
-  // }, []);
 
   useEffect(() => {
     const storedPlayers = JSON.parse(

@@ -1,6 +1,6 @@
 import express from "express";
-import { MongoExpiredSessionError } from "mongodb";
 import Player from "../models/Player.js";
+import { getPlayers, getSeasonYear } from "../utils/apiRequests.js";
 
 const router = express.Router();
 
@@ -16,6 +16,27 @@ router.get("/names", async (req, res) => {
         return { [player._id]: player.name };
       });
     res.json(playerNames);
+  } catch (error) {
+    res.json({ message: error.message });
+  }
+});
+
+//get all players current season stats
+router.get("/", async (req, res) => {
+  try {
+    const currSeasonYear = await getSeasonYear();
+    const players = await Player.find({
+      "stats.season[0].perGame": { $exists: true },
+    }).limit(100);
+    // players.forEach((player) => {
+    //   console.log(player.stats.season);
+    //   if (player.stats !== undefined) {
+    //     player.stats.season = player.stats.season.filter((season) => {
+    //       return season.seasonYear === currSeasonYear;
+    //     });
+    //   }
+    // });
+    res.json(players);
   } catch (error) {
     res.json({ message: error.message });
   }
