@@ -21,55 +21,55 @@ export default function leftbar() {
     <div className="leftbar">
       <div className="leftbarWrapper">
         <ul className="leftbarList">
-          <Link exact to="/" className="leftbarLink">
+          <Link to="/" className="leftbarLink">
             <li className="leftbarListItem">
               <ListAlt className="leftbarIcon" />
               <span className="leftbarListItemText">All Players</span>
             </li>
           </Link>
-          <Link exact to="/lineupBuilder" className="leftbarLink">
+          <Link to="/lineupBuilder" className="leftbarLink">
             <li className="leftbarListItem">
               <ViewModule className="leftbarIcon" />
               <span className="leftbarListItemText">Create Lineup</span>
             </li>
           </Link>
-          <Link exact to="/lineupBuilder" className="leftbarLink">
+          <Link to="/lineupBuilder" className="leftbarLink">
             <li className="leftbarListItem">
               <PlayCircleFilledOutlined className="leftbarIcon" />
               <span className="leftbarListItemText">Videos</span>
             </li>
           </Link>
-          <Link exact to="/lineupBuilder" className="leftbarLink">
+          <Link to="/lineupBuilder" className="leftbarLink">
             <li className="leftbarListItem">
               <Group className="leftbarIcon" />
               <span className="leftbarListItemText">Groups</span>
             </li>
           </Link>
-          <Link exact to="/lineupBuilder" className="leftbarLink">
+          <Link to="/lineupBuilder" className="leftbarLink">
             <li className="leftbarListItem">
               <Bookmark className="leftbarIcon" />
               <span className="leftbarListItemText">Bookmarks</span>
             </li>
           </Link>
-          <Link exact to="/lineupBuilder" className="leftbarLink">
+          <Link to="/lineupBuilder" className="leftbarLink">
             <li className="leftbarListItem">
               <HelpOutline className="leftbarIcon" />
               <span className="leftbarListItemText">Questions</span>
             </li>
           </Link>
-          <Link exact to="/lineupBuilder" className="leftbarLink">
+          <Link to="/lineupBuilder" className="leftbarLink">
             <li className="leftbarListItem">
               <WorkOutline className="leftbarIcon" />
               <span className="leftbarListItemText">Jobs</span>
             </li>
           </Link>
-          <Link exact to="/lineupBuilder" className="leftbarLink">
+          <Link to="/lineupBuilder" className="leftbarLink">
             <li className="leftbarListItem">
               <Event className="leftbarIcon" />
               <span className="leftbarListItemText">Events</span>
             </li>
           </Link>
-          <Link exact to="/lineupBuilder" className="leftbarLink">
+          <Link to="/lineupBuilder" className="leftbarLink">
             <li className="leftbarListItem">
               <School className="leftbarIcon" />
               <span className="leftbarListItemText">Courses</span>

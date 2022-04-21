@@ -6,78 +6,6 @@
   padding: 20px;
 }
 
-.lineupBox {
-  justify-content: center;
-  display: flex;
-  height: 350px;
-  width: 100%;
-}
-
-.playerCardBox {
-  width: 250px;
-  height: 330px;
-  position: relative;
-  padding: 10px;
-  justify-content: center;
-}
-
-.playerCardBoxButton {
-  outline-style: dashed;
-  outline-width: 3px;
-  outline-color: grey;
-  height: 100%;
-  width: 100%;
-  box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
-  align-items: center;
-  display: flex;
-  cursor: pointer;
-}
-
-.cardSearchBox {
-  position: absolute;
-  top: -60px;
-  left: 0;
-  background-color: white;
-  border-radius: 5px;
-  padding: 1rem;
-  box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
-  font-size: 16px;
-  border: none;
-}
-
-.searchBox-toggle-enter {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(10px);
-}
-.searchBox-toggle-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-  transition: all 150ms ease-in-out;
-}
-.searchBox-toggle-show-exit {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-.searchBox-toggle-exit-active {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(10px);
-  transition: all 150ms ease-in-out;
-}
-
-.addPlayerIcon {
-  margin: auto;
-  transform: scale(3);
-  color: grey;
-}
-
-.playerCardBoxButton:hover .addPlayerIcon {
-  transform: scale(4);
-}
-
 .builderTopbar {
   height: 50px;
   margin-bottom: 20px;
@@ -131,4 +59,97 @@
 
 .searchIcon:hover {
   transform: scale(1.2);
+}
+
+.lineupBox {
+  justify-content: center;
+  align-content: center;
+  display: flex;
+  height: 392px;
+  width: 100%;
+}
+
+.playerCardBox {
+  width: 235px;
+  height: 372px;
+  position: relative;
+  padding: 10px;
+  justify-content: center;
+}
+
+.playerCardBoxButton {
+  outline-style: dashed;
+  outline-width: 3px;
+  outline-color: grey;
+  height: 100%;
+  width: 100%;
+  box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
+  align-items: center;
+  display: flex;
+  cursor: pointer;
+}
+
+.cardSearchBox {
+  position: absolute;
+  top: -60px;
+  left: 0px;
+  width: 220px;
+  border-radius: 5px;
+  padding: 1rem;
+  box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
+  font-size: 16px;
+  border: none;
+}
+
+.searchBox-toggle-enter {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+.searchBox-toggle-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: all 150ms ease-in-out;
+}
+.searchBox-toggle-show-exit {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.searchBox-toggle-exit-active {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: all 150ms ease-in-out;
+}
+
+.playerCardBoxButton:hover .addPlayerIcon {
+  transform: scale(4);
+}
+
+.addPlayerIcon {
+  margin: auto;
+  transform: scale(3);
+  color: grey;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: -5px;
+  left: 0px;
+  background-color: white;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.dropdownItem {
+  padding: 1rem;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.dropdownItem:hover {
+  background-color: rgb(225, 225, 225);
 }

@@ -1,8 +1,8 @@
 .playerCardFront {
   width: 100%;
-  border-radius: 0px;
-  /* -webkit-box-shadow: 0px 0px 16px -8px rgba(0, 0, 0, 0.68); */
-  /* box-shadow: 0px 0px 16px -8px rgba(0, 0, 0, 0.68); */
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px 0 rgb(0, 0, 0, 0.3);
   background-color: rgb(241, 241, 241);
 }
 
@@ -20,8 +20,8 @@
 
 .playerCardFrontName {
   display: flex;
-  font-size: 26px;
-  font-weight: bold;
+  font-size: 24px;
+  font-weight: 500 !important;
 }
 
 .playerCardFrontHeaderRight {
@@ -48,6 +48,7 @@
 
 .playerInfo {
   display: flex;
+  font-size: 14px;
 }
 
 .playerCardFrontImg {
@@ -57,12 +58,10 @@
   object-fit: contain;
   position: absolute;
   bottom: 0;
-  background-color: red;
 }
 
 .playerCardFrontFooter {
   background-color: rgb(30, 30, 30);
   height: 15px;
-  /* border-bottom-left-radius: 10px;
-  border-bottom-right-radius: 10px; */
+  border-bottom-left-radius: 5px;
 }
