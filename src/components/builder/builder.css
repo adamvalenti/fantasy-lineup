@@ -6,59 +6,87 @@
   padding: 20px;
 }
 
-.builderTopbar {
-  height: 50px;
+.builderHeader {
+  height: 100px !important;
   margin-bottom: 20px;
-  display: flex;
   background-color: rgb(30, 30, 30);
   border-radius: 10px;
+  overflow: hidden;
 }
 
-.builderTopbarLeft {
-  display: flex;
-  flex: 1;
-  align-items: center;
-}
-
-.playerSearchBox {
-  width: auto;
-  height: 30px;
-  background-color: white;
-  border-radius: 30px;
+.builderHeaderSection {
+  height: 50%;
   display: flex;
   align-items: center;
-  margin: auto;
-  padding-right: 5px;
 }
 
-.builderTopbarRight {
-  flex: 4;
-  align-items: center;
-  display: flex;
-  position: relative;
-}
-
-.filterIcon {
-  cursor: pointer;
-}
-
-.masterClearButton {
-  cursor: pointer;
+.builderHeaderTitle {
+  font-size: 24px;
+  font-weight: 500 !important;
+  width: 226px;
+  padding: 10px 20px 10px;
   color: white;
-  position: absolute;
-  left: calc(100% - 45px);
 }
 
-.clearIcon {
+.builderHeaderItems {
+  display: flex;
+  align-items: center;
+}
+
+.builderHeaderItem {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  margin-left: 20px;
+  padding: 5px 10px 5px 10px;
+  color: black;
+  border-radius: 5px;
+}
+
+.paramSlider {
+  padding: 0 5px 0 15px;
+  width: 105px;
+}
+
+.enterButton {
   cursor: pointer;
+  margin-left: 5px;
 }
 
-.clearIcon:hover {
-  transform: scale(1.2);
+.searchText {
+  padding: 0 5px 0 15px;
+  width: 105px;
+  border: none;
+}
+.searchText:focus {
+  outline: none;
 }
 
-.searchIcon:hover {
-  transform: scale(1.2);
+.headerItemToggle-enter {
+  width: 0;
+  opacity: 0;
+  padding: 0;
+  pointer-events: none;
+}
+.headerItemToggle-enter-active {
+  opacity: 1;
+  width: 105px;
+  pointer-events: auto;
+  padding: 0 5px 0 15px;
+  transition: all 150ms ease-in-out;
+}
+.headerItemToggle-exit {
+  opacity: 1;
+  width: 105px;
+  padding: 0 5px 0 15px;
+  pointer-events: auto;
+}
+.headerItemToggle-exit-active {
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  padding: 0;
+  transition: all 150ms ease-in-out;
 }
 
 .lineupBox {
@@ -70,7 +98,7 @@
 }
 
 .playerCardBox {
-  width: 235px;
+  width: 234px;
   height: 372px;
   position: relative;
   padding: 10px;
@@ -101,23 +129,23 @@
   border: none;
 }
 
-.searchBox-toggle-enter {
+.searchBoxToggle-enter {
   opacity: 0;
   pointer-events: none;
   transform: translateY(10px);
 }
-.searchBox-toggle-enter-active {
+.searchBoxToggle-enter-active {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
   transition: all 150ms ease-in-out;
 }
-.searchBox-toggle-show-exit {
+.searchBoxToggle-show-exit {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
 }
-.searchBox-toggle-exit-active {
+.searchBoxToggle-exit-active {
   opacity: 0;
   pointer-events: none;
   transform: translateY(10px);

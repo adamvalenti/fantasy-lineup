@@ -2,47 +2,39 @@ import React, { useState, useEffect, useRef } from "react";
 import "./builder.css";
 import PlayerCard from "../playerCard/PlayerCard";
 import axios from "axios";
-import { Search, Clear, Add } from "@material-ui/icons";
+import { Add, KeyboardArrowDown } from "@material-ui/icons";
 import { CSSTransition } from "react-transition-group";
+import { Slider } from "@mui/material";
 
 export default function Buider() {
   const [availablePlayers, setavailablePlayers] = useState([]);
   const [lineup, setLineup] = useState([]);
-  const [openKey, setOpenKey] = useState([-1]);
+  const [openKeySearch, setOpenKeySearch] = useState([-1]);
+  const [openKeyFilter, setOpenKeyFilter] = useState([-1]);
+  const [openKeyScoring, setOpenKeyScoring] = useState([-1]);
   const [playerSuggestions, setPlayerSuggestions] = useState([]);
   const [playerText, setPlayerText] = useState([""]);
-
-  const playerFilterRef = useRef();
-
-  const lebronJames = {
-    _id: "2544",
-    name: "LeBron James",
-    teamId: "1610612739",
-    jersey: "23",
-    pos: "F",
-    heightFeet: 6,
-    heightInches: 8,
-    weightPounds: 250,
-    age: 37,
-    country: "USA",
-    stats: {
-      season: [
-        {
-          perGame: {
-            pts: 29.9,
-            ast: 4.5,
-            orb: 11.6,
-            drb: 0.8,
-            stl: 1.1,
-            blk: 51.8,
-            fp: 51.8,
-          },
-        },
-      ],
-    },
-  };
+  const [positionRequirements, setPositionRequirements] = useState([]);
+  const [scoringParams, setScoringParams] = useState([]);
 
   const emptyLineup = [{}, {}, {}, {}, {}];
+  const startingRequirements = { G: 4, F: 4, C: 1, Any: 1 };
+  const startingParams = {
+    PTS: 1,
+    AST: 1.5,
+    REB: 1.5,
+    STL: 3,
+    BLK: 3,
+    TOV: -1,
+  };
+
+  useEffect(() => {
+    setPositionRequirements(startingRequirements);
+  }, []);
+
+  useEffect(() => {
+    setScoringParams(startingParams);
+  }, []);
 
   useEffect(() => {
     const fetchavailablePlayers = async () => {
@@ -64,10 +56,6 @@ export default function Buider() {
     setLineup(emptyLineup);
   }, []);
 
-  function handleClearPlayer() {
-    playerFilterRef.current.value = null;
-  }
-
   function autocompletePlayers(text) {
     let matches = [];
     if (text.length > 2) {
@@ -86,33 +74,116 @@ export default function Buider() {
     setLineup(newLineup);
   }
 
+  function handleParamChange(newValue, param) {
+    var newScoringParams = scoringParams;
+    newScoringParams[param] = newValue;
+    setScoringParams(newScoringParams);
+  }
+
+  function displayParamChange(param) {
+    return scoringParams[param];
+  }
+
   return (
     <div className="builder">
       <div className="builderWrapper">
         <div className="playerCards">
-          <div className="builderTopbar">
-            <div className="builderTopbarLeft">
-              <div className="playerSearchBox">
-                <Search className="searchIcon" />
-                <input
-                  ref={playerFilterRef}
-                  placeholder="Search for player"
-                  className="searchInput"
-                />
-                <Clear className="clearIcon" onClick={handleClearPlayer} />
+          <div className="builderHeader">
+            <div className="builderHeaderSection">
+              <div className="builderHeaderTitle">Roster Requirements</div>
+              <div className="builderHeaderItems">
+                {Object.keys(positionRequirements).map((position, i) => {
+                  return (
+                    <div key={i} className="builderHeaderItem">
+                      <div className="headerItemTitle">{`${position} - ${positionRequirements[position]}`}</div>
+                      <CSSTransition
+                        in={openKeyFilter === i}
+                        unmountOnExit
+                        timeout={150}
+                        classNames="headerItemToggle"
+                      >
+                        <>
+                          <input
+                            className="searchText"
+                            type="text"
+                            placeholder="New requirement"
+                          />
+                        </>
+                      </CSSTransition>
+                      <div
+                        className="enterButton"
+                        onClick={() => {
+                          openKeyFilter === i
+                            ? setOpenKeyFilter(-1)
+                            : setOpenKeyFilter(i);
+                        }}
+                      >
+                        <KeyboardArrowDown />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <div className="builderTopbarRight"></div>
+            <div className="builderHeaderSection">
+              <div className="builderHeaderTitle">Scoring Parameters</div>
+              <div className="builderHeaderItems">
+                {Object.keys(scoringParams).map((param, i) => {
+                  return (
+                    <div key={i} className="builderHeaderItem">
+                      <div className="headerItemTitle">
+                        {`${param} - ${
+                          param === "TOV"
+                            ? "(" + scoringParams[param].toFixed(1) + ")"
+                            : scoringParams[param].toFixed(1)
+                        }`}
+                      </div>
+                      <CSSTransition
+                        in={openKeyScoring === i}
+                        unmountOnExit
+                        timeout={1000}
+                        classNames="headerItemToggle"
+                      >
+                        <div className="paramSlider">
+                          <Slider
+                            valueLabelDisplay="auto"
+                            step={0.5}
+                            marks
+                            min={param === "TOV" ? -5 : 1}
+                            max={param === "TOV" ? -1 : 5}
+                            value={displayParamChange()}
+                            onChange={(e) =>
+                              handleParamChange(e.target.value, param)
+                            }
+                          />
+                        </div>
+                      </CSSTransition>
+                      <div
+                        className="enterButton"
+                        onClick={() => {
+                          openKeyScoring === i
+                            ? setOpenKeyScoring(-1)
+                            : setOpenKeyScoring(i);
+                        }}
+                      >
+                        <KeyboardArrowDown />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
           <div className="lineupBox">
             {lineup.map((player, i) => {
-              console.log(player._id !== undefined);
               return player._id === undefined ? (
                 <div key={i} className="playerCardBox">
                   <div
                     className="playerCardBoxButton"
                     onClick={() => {
-                      openKey === i ? setOpenKey(-1) : setOpenKey(i);
+                      openKeySearch === i
+                        ? setOpenKeySearch(-1)
+                        : setOpenKeySearch(i);
                       setPlayerText("");
                       setPlayerSuggestions([]);
                     }}
@@ -120,10 +191,10 @@ export default function Buider() {
                     <Add className="addPlayerIcon" />
                   </div>
                   <CSSTransition
-                    in={openKey === i}
+                    in={openKeySearch === i}
                     unmountOnExit
                     timeout={500}
-                    classNames="searchBox-toggle"
+                    classNames="searchBoxToggle"
                   >
                     <>
                       <input
