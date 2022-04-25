@@ -25,9 +25,9 @@ import { useState } from "react";
 import Front from "./front/Front";
 import Back from "./back/Back";
 import ReactCardFlip from "react-card-flip";
-import { Flip } from "@material-ui/icons";
+import { Flip, Clear } from "@material-ui/icons";
 
-export default function PlayerCard({ player }) {
+export default function PlayerCard({ player, handleClearPlayer, lineup }) {
   const [isFlipped, setIsFlipped] = useState(false);
 
   function handleFlip() {
@@ -35,10 +35,18 @@ export default function PlayerCard({ player }) {
   }
 
   return (
-    <ReactCardFlip isFlipped={isFlipped} flipDirection="horizontal">
+    <ReactCardFlip
+      className="playerCardContainer"
+      isFlipped={isFlipped}
+      flipDirection="horizontal"
+    >
       <div className="playerCard">
         <Front player={player} />
         <Flip className="playerCardFlipButton" onClick={handleFlip}></Flip>
+        <Clear
+          className="playerCardRemoveButton"
+          onClick={(e) => handleClearPlayer(player._id)}
+        ></Clear>
       </div>
 
       <div className="playerCard">

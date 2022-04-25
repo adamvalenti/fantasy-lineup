@@ -1,12 +1,37 @@
 .playerCard {
   display: flex;
   position: relative;
+  top: -5px;
   width: 100%;
+  height: auto;
+}
+
+.playerCard:hover .playerCardFront {
+  opacity: 0.8;
+  transition: all 100ms ease-in-out;
 }
 
 .playerCardFlipButton {
   position: absolute;
   top: 10px;
-  left: 205px;
+  left: calc(100% - 30px);
   cursor: pointer;
+}
+
+.playerCardRemoveButton {
+  color: #2a2b30;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: calc(50% - 10px);
+  left: calc(50% - 10px);
+  cursor: pointer;
+  transform: scale(3);
+  transition: all 100ms ease-in-out;
+}
+
+.playerCard:hover .playerCardRemoveButton {
+  opacity: 1;
+  pointer-events: auto;
+  transition: all 150ms ease-in-out;
 }

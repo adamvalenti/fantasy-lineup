@@ -1,19 +1,8 @@
 .leftbar {
-  flex: 1;
-  height: calc(100vh - 50px);
-  overflow-y: scroll;
+  width: auto;
+  height: calc(100vh - 65px);
   position: sticky;
   top: 50px;
-}
-
-::-webkit-scrollbar {
-  width: 5px;
-}
-::-webkit-scrollbar-track {
-  background-color: #f1f1f1;
-}
-::-webkit-scrollbar-thumb {
-  background-color: rgb(179, 179, 179);
 }
 
 .leftbarWrapper {
@@ -26,19 +15,73 @@
 }
 
 .leftbarListItem {
+  align-items: center;
   margin-left: 0px;
-  width: 100%;
+  margin-bottom: 10px;
+  width: 55px;
   display: flex;
   align-items: center;
-  height: 50px;
+  height: 55px;
   font-weight: 450 !important;
   font-size: 20px;
   border-radius: 5px;
+  color: #a4a6a9;
+  transition: all 100ms ease-in-out;
 }
 
 .leftbarListItem:hover {
-  background-color: rgb(225, 225, 225);
+  color: #e7e8e9;
+  background-color: #3f424e;
+  transition: all 100ms ease-in-out;
   cursor: pointer !important;
+}
+
+.leftbarItemLabel {
+  opacity: 0;
+  padding: 0;
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  transition: all 150ms ease-in-out;
+}
+
+.labelBox {
+  background-color: #2a2b30;
+  display: flex;
+  align-items: center;
+  transition: all 150ms ease-in-out;
+}
+
+.labelArrow {
+  transform: translateX(10px);
+  opacity: 0;
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid #2a2b30;
+  transition: all 150ms ease-in-out;
+}
+
+.leftbarListItem:hover .leftbarItemLabel {
+  opacity: 1;
+  transition: all 150ms ease-in-out;
+}
+
+.leftbarListItem:hover .leftbarItemLabel .labelBox {
+  padding: 0.75rem;
+  transition: all 150ms ease-in-out;
+}
+
+.leftbarListItem:hover .leftbarItemLabel .labelArrow {
+  transform: translateX(0px);
+  opacity: 1;
+  transition: all 150ms ease-in-out;
+}
+
+.labelText {
+  color: #e4e4e6;
+  font-size: 16px;
 }
 
 .leftbarLink {
@@ -52,6 +95,7 @@
 .leftbarIcon {
   margin-right: 15px;
   margin-left: 15px;
+  transform: scale(1.5);
 }
 
 .leftbarButton {
@@ -60,14 +104,4 @@
   padding: 10px;
   border-radius: 5px;
   font-weight: 500;
-}
-
-.leftbarHr {
-  margin: 20px 0;
-}
-
-.leftbarFriendList {
-  padding: 0;
-  margin: 0;
-  list-style: none;
 }

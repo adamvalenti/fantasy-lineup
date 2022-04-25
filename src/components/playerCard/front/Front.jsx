@@ -10,7 +10,7 @@ export default function Front({ player }) {
             <span className="playerCardFrontName">{player.name}</span>
           </div>
           <div className="playerCardFrontTop">
-            <div className="playerCardFrontTopLeft">
+            {/* <div className="playerCardFrontTopLeft">
               <span className="playerInfo">age: {player.age} years</span>
               <span className="playerInfo">
                 height: {`${player.heightFeet}-${player.heightInches}`}
@@ -54,7 +54,7 @@ export default function Front({ player }) {
                   Math.round(player.stats.season[0].perGame.stl * 100) / 100
                 ).toFixed(1)}
               </span>
-            </div>
+            </div> */}
           </div>
           <img
             className="playerCardFrontImg"
@@ -63,7 +63,6 @@ export default function Front({ player }) {
           />
         </div>
       </div>
-      <div className="playerCardFrontFooter"></div>
     </div>
   );
 }

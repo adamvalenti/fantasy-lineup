@@ -1,7 +1,7 @@
 .topbarContainer {
-  height: 50px;
+  height: 65px;
   width: 100%;
-  background-color: darkorange;
+  background-color: #2a2b30;
   display: flex;
   align-items: center;
   position: sticky;
@@ -9,26 +9,48 @@
   z-index: 999;
 }
 
+.leftbarListItem {
+  align-items: center;
+  margin-left: 0px;
+  margin-bottom: 10px;
+  width: 55px;
+  display: flex;
+  align-items: center;
+  height: 55px;
+  font-weight: 450 !important;
+  font-size: 20px;
+  border-radius: 5px;
+  color: #a4a6a9;
+  transition: all 100ms ease-in-out;
+}
+
+.leftbarListItem:hover {
+  color: #e7e8e9;
+  background-color: #3f424e;
+  transition: all 100ms ease-in-out;
+  cursor: pointer !important;
+}
+
 .topbarLeft {
+  height: 100%;
   flex: 3;
+  display: flex;
+  align-items: center;
 }
 
 .logo {
   font-size: 24px;
   margin-left: 20px;
   font-weight: bold;
-  color: white;
+  color: #e4e4e6;
+  width: auto;
   cursor: pointer;
 }
 
-.topbarCenter {
-  flex: 5;
-}
-
 .searchbar {
-  width: 100%;
   height: 30px;
   background-color: white;
+  margin-left: 20px;
   border-radius: 30px;
   display: flex;
   align-items: center;
@@ -50,11 +72,31 @@
 }
 
 .topbarRight {
-  flex: 4;
+  height: 100%;
+  width: 120px;
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  color: white;
+  justify-content: space-evenly;
+  cursor: pointer;
+}
+
+.topbarRight:hover {
+  transition: all 100ms;
+  background-color: #3a3c43;
+}
+
+.topbarRight:hover .topbarImg {
+  transition: all 100ms;
+  color: #e4e4e6;
+}
+
+.loginText {
+  color: #a4a6a9;
+}
+
+.topbarRight:hover .loginText {
+  transition: all 100ms;
+  color: #e4e4e6;
 }
 
 .topbarLink {
@@ -73,25 +115,16 @@
   position: relative;
 }
 
-.topbarIconBadge {
-  width: 15px;
-  height: 15px;
-  background-color: red;
-  border-radius: 50%;
-  color: white;
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-}
-
 .topbarImg {
-  height: 32px;
-  width: 32px;
+  transform: scale(1.5);
+  background-color: #3a3c43;
   border-radius: 50%;
-  object-fit: cover;
   cursor: pointer;
+  align-items: center;
+  display: flex;
+  font-weight: 450 !important;
+  font-size: 20px;
+  border-radius: 5px;
+  color: #a4a6a9;
+  transition: all 100ms ease-in-out;
 }

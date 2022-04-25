@@ -1,20 +1,41 @@
 .builder {
   flex: 5.5;
+  height: 100%;
+  overflow-y: scroll;
+}
+
+::-webkit-scrollbar {
+  width: 18px;
+}
+::-webkit-scrollbar-track {
+  background-color: #2d303e;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #50556c;
 }
 
 .builderWrapper {
   padding: 20px;
 }
 
+.playerCards {
+  background-color: rgba(200, 200, 200, 0.07) !important;
+  padding: 20px;
+  border-radius: 15px;
+  height: auto;
+  width: auto;
+}
 .builderHeader {
-  height: 100px !important;
+  background-color: rgba(200, 200, 200, 0.07);
   margin-bottom: 20px;
-  background-color: rgb(30, 30, 30);
   border-radius: 10px;
+  padding-bottom: 10px;
+  outline: 1px solid rgba(185, 185, 185, 0.15);
   overflow: hidden;
 }
 
 .builderHeaderSection {
+  padding: 10px 0px 0px 0px;
   height: 50%;
   display: flex;
   align-items: center;
@@ -25,7 +46,7 @@
   font-weight: 500 !important;
   width: 226px;
   padding: 10px 20px 10px;
-  color: white;
+  color: #e4e4e6;
 }
 
 .builderHeaderItems {
@@ -36,28 +57,69 @@
 .builderHeaderItem {
   display: flex;
   align-items: center;
-  background-color: white;
+  background-color: rgba(200, 200, 200, 0.07);
   margin-left: 20px;
   padding: 5px 10px 5px 10px;
-  color: black;
+  color: #abacb1;
   border-radius: 5px;
+  outline: 1px solid rgba(185, 185, 185, 0.15);
 }
 
-.paramSlider {
-  padding: 0 5px 0 15px;
+.builderHeaderItem:hover .slider {
+  opacity: 1;
   width: 105px;
+  pointer-events: auto;
+  padding: 0 5px 0 15px;
+  transition: all 150ms ease-in-out;
 }
 
-.enterButton {
-  cursor: pointer;
-  margin-left: 5px;
+.builderHeaderItem:hover {
+  outline: 4px solid #a5b4fc;
+}
+
+.slider {
+  width: 0px;
+  pointer-events: none;
+  padding: 0;
+  opacity: 0;
+  transition: all 150ms ease-in-out;
+}
+
+.builderHeaderItem:hover .searchText {
+  opacity: 1;
+  width: 105px;
+  pointer-events: auto;
+  padding: 5px 5px 5px 15px;
+  transition: all 150ms ease-in-out;
+}
+
+.positionSliderContainer {
+  width: 500px;
+  align-items: center;
+  background-color: rgba(200, 200, 200, 0.07);
+  margin-left: 20px;
+  padding: 5px 10px 5px 10px;
+  color: #abacb1;
+  border-radius: 5px;
+  outline: 1px solid rgba(185, 185, 185, 0.15);
+}
+
+.positionSlider {
+  width: 500px;
 }
 
 .searchText {
-  padding: 0 5px 0 15px;
-  width: 105px;
+  width: 0px;
+  pointer-events: none;
+  padding: 5px 0 5px 0;
+  opacity: 0;
+  transition: all 150ms ease-in-out;
+  background-color: #3b3d49;
+  outline: none;
   border: none;
+  caret-color: #e2e3e5;
 }
+
 .searchText:focus {
   outline: none;
 }
@@ -91,30 +153,34 @@
 
 .lineupBox {
   justify-content: center;
-  align-content: center;
   display: flex;
-  height: 392px;
-  width: 100%;
+  height: auto;
+  width: auto;
+  flex-wrap: wrap !important;
 }
 
 .playerCardBox {
-  width: 234px;
-  height: 372px;
+  width: 220px;
+  height: 350px;
   position: relative;
   padding: 10px;
   justify-content: center;
 }
 
 .playerCardBoxButton {
-  outline-style: dashed;
-  outline-width: 3px;
-  outline-color: grey;
+  outline: 8px dashed #3d4859;
+  outline-offset: -5px;
   height: 100%;
   width: 100%;
   box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
   align-items: center;
   display: flex;
   cursor: pointer;
+}
+
+.playerCardBoxButton:hover {
+  background: radial-gradient(50% 50%, #324354 0%, rgba(200, 200, 200, 0));
+  outline: 8px dashed #6b96a3;
 }
 
 .cardSearchBox {
@@ -124,9 +190,12 @@
   width: 220px;
   border-radius: 5px;
   padding: 1rem;
-  box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
   font-size: 16px;
   border: none;
+  background-color: #2d313e;
+  outline: 4px solid #a5b4fc;
+  caret-color: #e2e3e5;
+  color: #e2e3e5;
 }
 
 .searchBoxToggle-enter {
@@ -153,20 +222,20 @@
 }
 
 .playerCardBoxButton:hover .addPlayerIcon {
-  transform: scale(4);
+  color: #dfffff;
 }
 
 .addPlayerIcon {
   margin: auto;
-  transform: scale(3);
-  color: grey;
+  transform: scale(3.5);
+  color: #7ec8e8;
 }
 
 .dropdownMenu {
   position: absolute;
-  top: -5px;
+  top: 0px;
   left: 0px;
-  background-color: white;
+  background-color: #2e323f;
   border-radius: 5px;
   box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
   overflow: hidden;
@@ -176,8 +245,9 @@
   padding: 1rem;
   font-size: 16px;
   cursor: pointer;
+  color: #e2e3e5;
 }
 
 .dropdownItem:hover {
-  background-color: rgb(225, 225, 225);
+  background-color: #393e4e;
 }
