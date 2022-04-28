@@ -3,7 +3,8 @@ import Home from "./pages/home/Home.jsx";
 import Login from "./pages/login/Login.jsx";
 import Profile from "./pages/profile/Profile.jsx";
 import Register from "./pages/register/Register.jsx";
-import LineupBuilder from "./pages/lineupBuilder/LineupBuilder.jsx";
+import Lineups from "./pages/lineups/Lineups.jsx";
+import Leagues from "./pages/leagues/Leagues.jsx";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 
 function App() {
@@ -14,7 +15,8 @@ function App() {
         <Route exact path="/login" element={<Login />} />
         <Route exact path="/Profile/:username" element={<Profile />} />
         <Route exact path="/register" element={<Register />} />
-        <Route exact path="/lineupbuilder" element={<LineupBuilder />} />
+        <Route exact path="/lineups" element={<Lineups />} />
+        <Route exact path="/leagues" element={<Leagues />} />
       </Routes>
     </Router>
   );

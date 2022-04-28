@@ -1,0 +1,33 @@
+.leaguesContainer {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 65px);
+  background: linear-gradient(#262a37, #090b1a);
+  background-position: center;
+  position: relative;
+}
+
+.leaguesContentWrapper {
+  flex: 5.5;
+  height: auto;
+  overflow-y: scroll;
+  padding: 20px;
+}
+
+.leagueBuilder {
+  background-color: rgba(200, 200, 200, 0.07) !important;
+  padding: 20px;
+  border-radius: 15px;
+  height: auto;
+  width: auto;
+}
+
+.leaguesContentWrapper::-webkit-scrollbar {
+  width: 18px;
+}
+.leaguesContentWrapper::-webkit-scrollbar-track {
+  background-color: #2d303e;
+}
+.leaguesContentWrapper::-webkit-scrollbar-thumb {
+  background-color: #50556c;
+}

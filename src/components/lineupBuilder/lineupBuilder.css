@@ -1,0 +1,100 @@
+.lineupBox {
+  justify-content: center;
+  display: flex;
+  height: auto;
+  width: auto;
+  flex-wrap: wrap !important;
+}
+
+.playerCardBox {
+  width: 220px;
+  height: 350px;
+  position: relative;
+  padding: 10px;
+  justify-content: center;
+}
+
+.playerCardBoxButton {
+  outline: 8px dashed #3d4859;
+  outline-offset: -5px;
+  height: 100%;
+  width: 100%;
+  box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
+  align-items: center;
+  display: flex;
+  cursor: pointer;
+}
+
+.playerCardBoxButton:hover {
+  background: radial-gradient(50% 50%, #324354 0%, rgba(200, 200, 200, 0));
+  outline: 8px dashed #6b96a3;
+}
+
+.cardSearchBox {
+  position: absolute;
+  top: -60px;
+  left: 0px;
+  width: 220px;
+  border-radius: 5px;
+  padding: 1rem;
+  font-size: 16px;
+  border: none;
+  background-color: #2d313e;
+  outline: 4px solid #a5b4fc;
+  caret-color: #e2e3e5;
+  color: #e2e3e5;
+}
+
+.searchBoxToggle-enter {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+.searchBoxToggle-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: all 150ms ease-in-out;
+}
+.searchBoxToggle-show-exit {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.searchBoxToggle-exit-active {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: all 150ms ease-in-out;
+}
+
+.playerCardBoxButton:hover .addPlayerIcon {
+  color: #dfffff;
+}
+
+.addPlayerIcon {
+  margin: auto;
+  transform: scale(3.5);
+  color: #7ec8e8;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  background-color: #2e323f;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px 0 rgb(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.dropdownItem {
+  padding: 1rem;
+  font-size: 16px;
+  cursor: pointer;
+  color: #e2e3e5;
+}
+
+.dropdownItem:hover {
+  background-color: #393e4e;
+}

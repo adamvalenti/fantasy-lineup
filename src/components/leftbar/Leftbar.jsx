@@ -21,7 +21,7 @@ export default function leftbar() {
               </div>
             </li>
           </Link>
-          <Link to="/lineupBuilder" className="leftbarLink">
+          <Link to="/lineups" className="leftbarLink">
             <li className="leftbarListItem">
               <ViewModule className="leftbarIcon" />
               <div className="leftbarItemLabel">
@@ -32,7 +32,7 @@ export default function leftbar() {
               </div>
             </li>
           </Link>
-          <Link to="/lineupBuilder" className="leftbarLink">
+          <Link to="/leagues" className="leftbarLink">
             <li className="leftbarListItem">
               <EmojiEvents className="leftbarIcon" />
               <div className="leftbarItemLabel">

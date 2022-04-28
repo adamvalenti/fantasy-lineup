@@ -1,0 +1,33 @@
+.lineupsContainer {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 65px);
+  background: linear-gradient(#262a37, #090b1a);
+  background-position: center;
+  position: relative;
+}
+
+.lineupsContentWrapper {
+  flex: 5.5;
+  height: auto;
+  padding: 20px;
+  overflow-y: scroll;
+}
+
+.lineupBuilder {
+  background-color: rgba(200, 200, 200, 0.07) !important;
+  padding: 20px;
+  border-radius: 15px;
+  height: auto;
+  width: auto;
+}
+
+.lineupsContentWrapper::-webkit-scrollbar {
+  width: 18px;
+}
+.lineupsContentWrapper::-webkit-scrollbar-track {
+  background-color: #2d303e;
+}
+.lineupsContentWrapper::-webkit-scrollbar-thumb {
+  background-color: #50556c;
+}

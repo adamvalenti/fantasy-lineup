@@ -1,0 +1,36 @@
+.submitBuilderContent {
+  margin-top: 20px;
+  width: auto;
+  height: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.submitButtonContainer {
+  background-color: #7ec8e8;
+  width: 300px;
+  height: 60px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 100ms ease-in-out;
+}
+
+.submitButtonContainer:hover {
+  background-color: #97dcfa;
+  transition: all 100ms ease-in-out;
+}
+
+.submitButtonText {
+  font-size: 24px;
+  color: #333333;
+  font-weight: 500;
+  transition: all 100ms ease-in-out;
+}
+
+.submitButtonContainer:hover .submitButtonText {
+  color: #111111;
+  transition: all 100ms ease-in-out;
+}

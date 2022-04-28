@@ -1,0 +1,135 @@
+.leagueParametersContent {
+  background-color: rgba(200, 200, 200, 0.07);
+  margin-bottom: 20px;
+  border-radius: 10px;
+  padding-bottom: 10px;
+  outline: 1px solid rgba(185, 185, 185, 0.15);
+  position: relative;
+}
+
+.leagueParametersSection {
+  padding: 10px 0px 0px 0px;
+  height: 50%;
+  display: flex;
+  align-items: center;
+}
+
+.leagueParametersTitle {
+  font-size: 24px;
+  font-weight: 500 !important;
+  width: 226px;
+  padding: 10px 20px 10px;
+  color: #e4e4e6;
+}
+
+.leagueParametersItems {
+  display: flex;
+  align-items: center;
+}
+
+.leagueParametersItem {
+  display: flex;
+  align-items: center;
+  background-color: rgba(200, 200, 200, 0.07);
+  margin-left: 20px;
+  padding: 5px 10px 5px 10px;
+  color: #abacb1;
+  border-radius: 5px;
+  outline: 1px solid rgba(185, 185, 185, 0.15);
+}
+
+.leagueParametersItem:hover .playerInfo {
+  opacity: 1;
+  width: 190px;
+  pointer-events: auto;
+  padding: 8px 13px 8px 13px;
+  transition: all 200ms ease-in-out;
+}
+
+.playerInfo:focus {
+  opacity: 1;
+  width: 190px;
+  pointer-events: auto;
+  padding: 8px 13px 8px 13px;
+  transition: all 200ms ease-in-out;
+}
+
+.leagueParametersItem:hover .submitButton {
+  opacity: 1;
+  width: 10px;
+  pointer-events: auto;
+  padding: 0 15px 0 0;
+  transition: all 200ms ease-in-out;
+}
+
+.submitButton {
+  cursor: pointer;
+  opacity: 0;
+  width: 0;
+  pointer-events: none;
+  padding: 0;
+  transition: all 200ms ease-in-out;
+}
+
+.playerInfo:focus + .submitButton {
+  opacity: 1;
+  width: 10px;
+  pointer-events: auto;
+  padding: 0 15px 0 0;
+  transition: all 200ms ease-in-out;
+}
+
+.leagueParametersItem:hover {
+  outline: 4px solid #a5b4fc;
+}
+
+.leagueParametersItem:hover .itemText {
+  color: #d4d4d4;
+  transition: all 200ms ease-in-out;
+}
+
+.itemText {
+  color: #abacb1;
+  transition: all 200ms ease-in-out;
+}
+
+.playerInfo {
+  background-color: rgba(200, 200, 200, 0);
+  font-size: 16px;
+  color: #d4d4d4;
+  outline: none;
+  border: none;
+  width: 0px;
+  pointer-events: none;
+  padding: 8px 0px 8px 0;
+  opacity: 0;
+  transition: all 200ms ease-in-out;
+  caret-color: #e2e3e5;
+}
+
+.leagueParametersTopright {
+  position: absolute;
+  padding: 10px 12px 10px 12px;
+  top: 10px;
+  left: calc(100% - 60px);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  transition: all 200ms ease-in-out;
+}
+
+.leagueParametersTopright:hover {
+  background-color: rgba(200, 200, 200, 0.1);
+  transition: all 200ms ease-in-out;
+}
+
+.lockParametersButton {
+  cursor: pointer;
+  color: #a4a6a9;
+  transform: scale(1.5);
+  transition: all 200ms ease-in-out;
+}
+.leagueParametersTopright:hover .lockParametersButton {
+  color: #e7e8e9;
+  transition: all 200ms ease-in-out;
+}
